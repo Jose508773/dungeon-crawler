@@ -1,7 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "buildCommand": "cd dungeon-crawler && npm run build",
+  "outputDirectory": "dungeon-crawler/dist",
   "framework": "vite",
+  "installCommand": "cd dungeon-crawler && npm install",
   "rewrites": [
     {
       "source": "/(.*)",

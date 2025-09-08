@@ -1,0 +1,15 @@
+{
+  "name": "dungeon-crawler-complete",
+  "version": "1.0.0",
+  "description": "Dark Depths Crawler - Complete Dungeon Adventure Game",
+  "private": true,
+  "scripts": {
+    "build": "cd dungeon-crawler && npm run build",
+    "dev": "cd dungeon-crawler && npm run dev",
+    "install": "cd dungeon-crawler && npm install",
+    "preview": "cd dungeon-crawler && npm run preview"
+  },
+  "keywords": ["dungeon-crawler", "game", "react", "vite"],
+  "author": "Jose Ochoa",
+  "license": "MIT"
+}
