@@ -51,8 +51,8 @@ const Game = () => {
   const [combatLog, setCombatLog] = useState([]);
   const [isMoving, setIsMoving] = useState(false);
   
-  // Simple UI visibility toggle
-  const [showUI, setShowUI] = useState(true);
+  // Simple UI visibility toggle (currently unused but kept for future features)
+  const [_showUI, setShowUI] = useState(true);
 
   // Menu state
   const [openMenus, setOpenMenus] = useState({
@@ -80,11 +80,13 @@ const Game = () => {
   };
 
   // Handle item usage
-  const handleUseItem = (item, index) => {
+  const handleUseItem = useCallback((item, index) => {
     if (item.type === 'consumable') {
       if (item.health) {
-        const newHealth = Math.min(player.maxHealth, player.health + item.health);
-        setPlayer(prev => ({ ...prev, health: newHealth }));
+        setPlayer(prev => {
+          const newHealth = Math.min(prev.maxHealth, prev.health + item.health);
+          return { ...prev, health: newHealth };
+        });
         addCombatMessage(`Used ${item.name}! Restored ${item.health} health.`);
       }
       
@@ -94,20 +96,22 @@ const Game = () => {
         items: prev.items.filter((_, i) => i !== index)
       }));
     }
-  };
+  }, [addCombatMessage]);
 
   // Handle unequipping items
-  const handleUnequipItem = (itemType) => {
+  const handleUnequipItem = useCallback((itemType) => {
     if (itemType === 'weapon' && inventory.weapon) {
+      const weaponName = inventory.weapon.name;
       setPlayer(prev => removeItemStats({ ...prev }, inventory.weapon));
       setInventory(prev => ({ ...prev, weapon: null }));
-      addCombatMessage(`Unequipped ${inventory.weapon.name}`);
+      addCombatMessage(`Unequipped ${weaponName}`);
     } else if (itemType === 'armor' && inventory.armor) {
+      const armorName = inventory.armor.name;
       setPlayer(prev => removeItemStats({ ...prev }, inventory.armor));
       setInventory(prev => ({ ...prev, armor: null }));
-      addCombatMessage(`Unequipped ${inventory.armor.name}`);
+      addCombatMessage(`Unequipped ${armorName}`);
     }
-  };
+  }, [inventory.weapon, inventory.armor, addCombatMessage]);
 
   // Generate a new dungeon level
   const generateNewDungeon = useCallback((level = 1) => {
@@ -132,17 +136,24 @@ const Game = () => {
     
     // Add log message
     addCombatMessage(`Entered dungeon level ${level}`);
-  }, []);
+  }, [addCombatMessage]);
 
   // Initialize dungeon on component mount
   useEffect(() => {
     generateNewDungeon(1);
   }, [generateNewDungeon]);
 
+  // Reset movement lock when game state changes
+  useEffect(() => {
+    if (gameState !== 'playing') {
+      setIsMoving(false);
+    }
+  }, [gameState]);
+
   // Add message to combat log
-  const addCombatMessage = (message) => {
+  const addCombatMessage = useCallback((message) => {
     setCombatLog(prev => [...prev.slice(-9), { message, turn }]);
-  };
+  }, [turn]);
 
   // Handle player movement
   const movePlayer = useCallback((dx, dy) => {
@@ -191,16 +202,26 @@ const Game = () => {
           // Apply rewards and update player
           const rewards = CombatSystem.applyRewards(newPlayer, combatResults);
           
-          setPlayer(prev => ({
-            ...prev,
-            experience: newPlayer.experience,
-            gold: newPlayer.gold,
-            health: newPlayer.health,
-            level: newPlayer.level,
-            maxHealth: newPlayer.maxHealth,
-            attack: newPlayer.attack,
-            defense: newPlayer.defense
-          }));
+          setPlayer(prev => {
+            const updatedPlayer = {
+              ...prev,
+              experience: newPlayer.experience,
+              gold: newPlayer.gold,
+              health: newPlayer.health,
+              level: newPlayer.level,
+              maxHealth: newPlayer.maxHealth,
+              attack: newPlayer.attack,
+              defense: newPlayer.defense
+            };
+            
+            // Check for game over
+            if (updatedPlayer.health <= 0) {
+              setGameState('gameOver');
+              addCombatMessage('Game Over! You have been defeated.');
+            }
+            
+            return updatedPlayer;
+          });
           
           // Add combat messages
           combatResults.forEach(result => addCombatMessage(result.message));
@@ -211,12 +232,6 @@ const Game = () => {
           
           if (rewards.levelUp.leveledUp) {
             addCombatMessage(rewards.levelUp.message);
-          }
-          
-          // Check for game over
-          if (newPlayer.health <= 0) {
-            setGameState('gameOver');
-            addCombatMessage('Game Over! You have been defeated.');
           }
         }
         
@@ -229,7 +244,7 @@ const Game = () => {
     
     // Increment turn counter
     setTurn(prevTurn => prevTurn + 1);
-  }, [gameState, dungeon, enemies, isMoving]);
+  }, [gameState, dungeon, enemies, isMoving, addCombatMessage]);
 
   // Handle enemy turns
   useEffect(() => {
@@ -254,24 +269,26 @@ const Game = () => {
         if (combatResults.length > 0) {
           combatResults.forEach(result => addCombatMessage(result.message));
           
-          // Update player health - use functional update to avoid stale closure
+          // Update player health and check for game over in one operation
           setPlayer(prev => {
             const updatedPlayer = { ...prev };
+            let totalDamage = 0;
+            
             combatResults.forEach(result => {
               if (result.damage) {
-                updatedPlayer.health = Math.max(0, updatedPlayer.health - result.damage);
+                totalDamage += result.damage;
               }
             });
-            return updatedPlayer;
-          });
-          
-          // Check for game over
-          setPlayer(prev => {
-            if (prev.health <= 0) {
+            
+            updatedPlayer.health = Math.max(0, updatedPlayer.health - totalDamage);
+            
+            // Check for game over
+            if (updatedPlayer.health <= 0) {
               setGameState('gameOver');
               addCombatMessage('Game Over! You have been defeated.');
             }
-            return prev;
+            
+            return updatedPlayer;
           });
         }
         
@@ -280,7 +297,7 @@ const Game = () => {
     }, 500); // Delay enemy turns slightly for better UX
 
     return () => clearTimeout(enemyTurnTimer);
-  }, [turn, gameState, dungeon, player]);
+  }, [turn, gameState, dungeon, player, addCombatMessage]);
 
   // Handle keyboard input with debouncing
   useEffect(() => {
@@ -342,7 +359,7 @@ const Game = () => {
   }, [gameState, movePlayer, toggleUI]);
 
   // Handle tile interactions
-  const handleTileInteraction = (x, y) => {
+  const handleTileInteraction = useCallback((x, y) => {
     const tile = dungeon[y] && dungeon[y][x];
     
     if (tile === 'chest') {
@@ -403,21 +420,26 @@ const Game = () => {
       generateNewDungeon(nextLevel);
       addCombatMessage(`Descended to level ${nextLevel}`);
     }
-  };
+  }, [dungeon, dungeonLevel, inventory, addCombatMessage, generateNewDungeon]);
 
   // Check for interactions when player moves
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || isMoving) return;
     if (dungeon[player.y] && dungeon[player.y][player.x]) {
       const currentTile = dungeon[player.y][player.x];
       if (currentTile === 'chest' || currentTile === 'stairs') {
-        handleTileInteraction(player.x, player.y);
+        // Add a small delay to prevent interaction during movement
+        const interactionTimer = setTimeout(() => {
+          handleTileInteraction(player.x, player.y);
+        }, 50);
+        
+        return () => clearTimeout(interactionTimer);
       }
     }
-  }, [player.x, player.y, gameState]);
+  }, [player.x, player.y, gameState, dungeon, handleTileInteraction, isMoving]);
 
-  // Simple UI toggle function
-  const resetGame = () => {
+  // Reset game function
+  const resetGame = useCallback(() => {
     setPlayer(initialPlayer);
     setInventory(initialInventory);
     setEnemies([]);
@@ -427,7 +449,7 @@ const Game = () => {
     setDungeonLevel(1);
     setIsMoving(false);
     generateNewDungeon(1);
-  };
+  }, [generateNewDungeon]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
