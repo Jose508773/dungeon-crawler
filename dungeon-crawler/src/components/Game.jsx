@@ -49,6 +49,7 @@ const Game = () => {
   const [turn, setTurn] = useState(0);
   const [dungeonLevel, setDungeonLevel] = useState(1);
   const [combatLog, setCombatLog] = useState([]);
+  const [isMoving, setIsMoving] = useState(false);
   
   // Simple UI visibility toggle
   const [showUI, setShowUI] = useState(true);
@@ -145,7 +146,9 @@ const Game = () => {
 
   // Handle player movement
   const movePlayer = useCallback((dx, dy) => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || isMoving) return;
+    
+    setIsMoving(true);
 
     setPlayer(prevPlayer => {
       const newX = prevPlayer.x + dx;
@@ -153,11 +156,13 @@ const Game = () => {
       
       // Check bounds
       if (newX < 0 || newX >= BOARD_WIDTH || newY < 0 || newY >= BOARD_HEIGHT) {
+        setIsMoving(false);
         return prevPlayer;
       }
       
       // Check for walls
       if (dungeon[newY] && dungeon[newY][newX] === 'wall') {
+        setIsMoving(false);
         return prevPlayer;
       }
       
@@ -175,8 +180,8 @@ const Game = () => {
         direction
       };
 
-      // Handle combat when moving
-      setTimeout(() => {
+      // Handle combat when moving - use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
         const combatResults = CombatSystem.handleAutoCombat(newPlayer, enemies);
         
         if (combatResults.length > 0) {
@@ -214,14 +219,17 @@ const Game = () => {
             addCombatMessage('Game Over! You have been defeated.');
           }
         }
-      }, 100);
+        
+        // Re-enable movement after combat processing
+        setIsMoving(false);
+      });
       
       return newPlayer;
     });
     
     // Increment turn counter
     setTurn(prevTurn => prevTurn + 1);
-  }, [gameState, dungeon, enemies]);
+  }, [gameState, dungeon, enemies, isMoving]);
 
   // Handle enemy turns
   useEffect(() => {
@@ -246,17 +254,25 @@ const Game = () => {
         if (combatResults.length > 0) {
           combatResults.forEach(result => addCombatMessage(result.message));
           
-          // Update player health
-          setPlayer(prev => ({
-            ...prev,
-            health: player.health
-          }));
+          // Update player health - use functional update to avoid stale closure
+          setPlayer(prev => {
+            const updatedPlayer = { ...prev };
+            combatResults.forEach(result => {
+              if (result.damage) {
+                updatedPlayer.health = Math.max(0, updatedPlayer.health - result.damage);
+              }
+            });
+            return updatedPlayer;
+          });
           
           // Check for game over
-          if (player.health <= 0) {
-            setGameState('gameOver');
-            addCombatMessage('Game Over! You have been defeated.');
-          }
+          setPlayer(prev => {
+            if (prev.health <= 0) {
+              setGameState('gameOver');
+              addCombatMessage('Game Over! You have been defeated.');
+            }
+            return prev;
+          });
         }
         
         return newEnemies;
@@ -266,10 +282,17 @@ const Game = () => {
     return () => clearTimeout(enemyTurnTimer);
   }, [turn, gameState, dungeon, player]);
 
-  // Handle keyboard input
+  // Handle keyboard input with debouncing
   useEffect(() => {
+    let lastKeyPress = 0;
+    const DEBOUNCE_TIME = 100; // 100ms debounce
+    
     const handleKeyPress = (event) => {
       if (gameState !== 'playing') return;
+      
+      const now = Date.now();
+      if (now - lastKeyPress < DEBOUNCE_TIME) return;
+      lastKeyPress = now;
       
       switch (event.key) {
         case 'ArrowUp':
@@ -384,13 +407,14 @@ const Game = () => {
 
   // Check for interactions when player moves
   useEffect(() => {
+    if (gameState !== 'playing') return;
     if (dungeon[player.y] && dungeon[player.y][player.x]) {
       const currentTile = dungeon[player.y][player.x];
       if (currentTile === 'chest' || currentTile === 'stairs') {
         handleTileInteraction(player.x, player.y);
       }
     }
-  }, [player.x, player.y, dungeon]);
+  }, [player.x, player.y, gameState]);
 
   // Simple UI toggle function
   const resetGame = () => {
@@ -401,6 +425,7 @@ const Game = () => {
     setTurn(0);
     setCombatLog([]);
     setDungeonLevel(1);
+    setIsMoving(false);
     generateNewDungeon(1);
   };
 
