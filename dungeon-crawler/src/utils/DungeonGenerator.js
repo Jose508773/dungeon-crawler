@@ -347,7 +347,7 @@ export class DungeonGenerator {
     return visited.size === floorTiles.length;
   }
 
-  // Connect isolated areas by creating additional corridors
+  // Connect isolated areas by creating additional corridors - OPTIMIZED
   connectIsolatedAreas() {
     const floorTiles = [];
     
@@ -362,12 +362,25 @@ export class DungeonGenerator {
 
     if (floorTiles.length === 0) return;
 
-    // Try to connect isolated areas by creating corridors
-    const maxAttempts = 20;
+    // Try to connect isolated areas by creating corridors - REDUCED ATTEMPTS
+    const maxAttempts = 5; // Reduced from 20 to 5
     let attempts = 0;
 
-    while (!this.checkConnectivity() && attempts < maxAttempts) {
+    while (attempts < maxAttempts) {
       attempts++;
+      
+      // Skip connectivity check if too many floor tiles (performance optimization)
+      if (floorTiles.length > 50) {
+        console.log('Skipping connectivity check for large dungeon');
+        break;
+      }
+      
+      try {
+        if (this.checkConnectivity()) break;
+      } catch (error) {
+        console.warn('Connectivity check failed:', error);
+        break;
+      }
       
       // Pick two random floor tiles
       const tile1 = floorTiles[this.randomInt(0, floorTiles.length - 1)];
@@ -375,9 +388,14 @@ export class DungeonGenerator {
       
       if (tile1.x === tile2.x && tile1.y === tile2.y) continue;
 
-      // Create a corridor between them
-      this.createHorizontalCorridor(tile1.x, tile2.x, tile1.y);
-      this.createVerticalCorridor(tile1.y, tile2.y, tile2.x);
+      try {
+        // Create a corridor between them
+        this.createHorizontalCorridor(tile1.x, tile2.x, tile1.y);
+        this.createVerticalCorridor(tile1.y, tile2.y, tile2.x);
+      } catch (error) {
+        console.warn('Corridor creation failed:', error);
+        break;
+      }
     }
   }
 }

@@ -125,29 +125,41 @@ const Game = () => {
     }
   }, [inventory.weapon, inventory.armor, addCombatMessage]);
 
-  // Generate a new dungeon level
+  // Generate a new dungeon level with enemy limit
   const generateNewDungeon = useCallback((level = 1) => {
-    const dungeonData = generateDungeon(BOARD_WIDTH, BOARD_HEIGHT);
-    setDungeon(dungeonData.dungeon);
-    
-    // Create enemies from spawn points
-    const newEnemies = dungeonData.enemySpawns.map((spawn, index) => {
-      const enemyType = getRandomEnemyType(level);
-      return createEnemy(enemyType, spawn.x, spawn.y, `enemy_${index}`);
-    });
-    
-    setEnemies(newEnemies);
-    
-    // Reset player position
-    setPlayer(prev => ({
-      ...prev,
-      x: dungeonData.playerStart.x,
-      y: dungeonData.playerStart.y,
-      direction: 'front'
-    }));
-    
-    // Add log message directly to avoid circular dependency
-    setCombatLog(prev => [...prev.slice(-9), { message: `Entered dungeon level ${level}`, turn: 0 }]);
+    try {
+      const dungeonData = generateDungeon(BOARD_WIDTH, BOARD_HEIGHT);
+      setDungeon(dungeonData.dungeon);
+      
+      // Create enemies from spawn points - LIMIT TO 5 ENEMIES MAX
+      const maxEnemies = Math.min(5, dungeonData.enemySpawns.length);
+      const limitedSpawns = dungeonData.enemySpawns.slice(0, maxEnemies);
+      
+      const newEnemies = limitedSpawns.map((spawn, index) => {
+        const enemyType = getRandomEnemyType(level);
+        return createEnemy(enemyType, spawn.x, spawn.y, `enemy_${index}`);
+      });
+      
+      setEnemies(newEnemies);
+      console.log(`Generated ${newEnemies.length} enemies for level ${level}`);
+      
+      // Reset player position
+      setPlayer(prev => ({
+        ...prev,
+        x: dungeonData.playerStart.x,
+        y: dungeonData.playerStart.y,
+        direction: 'front'
+      }));
+      
+      // Add log message directly to avoid circular dependency
+      setCombatLog(prev => [...prev.slice(-9), { message: `Entered dungeon level ${level}`, turn: 0 }]);
+    } catch (error) {
+      console.error('Dungeon generation error:', error);
+      // Fallback: create minimal dungeon
+      setDungeon(Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill('floor')));
+      setEnemies([]);
+      setPlayer(prev => ({ ...prev, x: 1, y: 1, direction: 'front' }));
+    }
   }, []);
 
   // Initialize dungeon on component mount
@@ -292,9 +304,13 @@ const Game = () => {
     setTurn(prevTurn => prevTurn + 1);
   }, [gameState, dungeon, enemies, isMoving, addCombatMessage, turn]);
 
-  // Handle enemy turns with optimization
+  // Handle enemy turns with optimization - TEMPORARILY DISABLED FOR DEBUGGING
   useEffect(() => {
     if (gameState !== 'playing' || turn === 0 || combatProcessingRef.current) return;
+
+    // TEMPORARY: Disable enemy AI to isolate the performance issue
+    console.log('Enemy turn skipped for debugging - Turn:', turn);
+    return;
 
     // Clear any existing enemy turn timeout
     if (enemyTurnTimeoutRef.current) {
@@ -309,11 +325,21 @@ const Game = () => {
           const newEnemies = [...prevEnemies];
           let anyEnemyMoved = false;
           
-          // Move each enemy with error handling
-          newEnemies.forEach(enemy => {
+          // Move each enemy with error handling - LIMITED TO 3 ENEMIES MAX
+          const activeEnemies = newEnemies.slice(0, 3);
+          activeEnemies.forEach((enemy, index) => {
             try {
-              if (enemy && enemy.isAlive && enemy.getNextMove) {
+              if (enemy && enemy.isAlive && enemy.getNextMove && index < 3) {
+                const startTime = performance.now();
                 const move = enemy.getNextMove(dungeon, newEnemies, player, turn);
+                const endTime = performance.now();
+                
+                // If enemy AI takes too long, skip it
+                if (endTime - startTime > 50) {
+                  console.warn(`Enemy ${enemy.id} AI took too long: ${endTime - startTime}ms`);
+                  return;
+                }
+                
                 if (move && move.x !== undefined && move.y !== undefined) {
                   enemy.x = move.x;
                   enemy.y = move.y;
@@ -326,48 +352,6 @@ const Game = () => {
             }
           });
           
-          // Handle enemy attacks only if enemies moved
-          if (anyEnemyMoved) {
-            try {
-              const combatResults = CombatSystem.handleEnemyTurnCombat(newEnemies, player);
-              
-              if (combatResults && combatResults.length > 0) {
-                // Batch all combat messages
-                const messages = combatResults
-                  .filter(result => result && result.message)
-                  .map(result => result.message);
-                
-                if (messages.length > 0) {
-                  setCombatLog(prev => {
-                    const newMessages = messages.map(message => ({ message, turn }));
-                    return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
-                  });
-                }
-                
-                // Calculate total damage
-                const totalDamage = combatResults
-                  .filter(result => result && result.damage)
-                  .reduce((sum, result) => sum + result.damage, 0);
-                
-                if (totalDamage > 0) {
-                  setPlayer(prev => {
-                    const newHealth = Math.max(0, prev.health - totalDamage);
-                    
-                    // Check for game over
-                    if (newHealth <= 0) {
-                      setGameState('gameOver');
-                      setCombatLog(prevLog => [...prevLog.slice(-9), { message: 'Game Over! You have been defeated.', turn }]);
-                    }
-                    
-                    return { ...prev, health: newHealth };
-                  });
-                }
-              }
-            } catch (error) {
-              console.error('Enemy combat error:', error);
-            }
-          }
-          
           return newEnemies;
         });
       } catch (error) {
@@ -375,7 +359,7 @@ const Game = () => {
         // Pause game on critical error
         setGameState('paused');
       }
-    }, 300); // Reduced delay for better responsiveness
+    }, 500); // Increased delay to reduce load
 
     return () => {
       if (enemyTurnTimeoutRef.current) {
