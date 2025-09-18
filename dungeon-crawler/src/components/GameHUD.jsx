@@ -80,38 +80,38 @@ const GameHUD = ({
       <div className="fixed bottom-4 left-4 right-4 z-40 pointer-events-none">
         <div className="flex justify-between items-end">
           {/* Menu Toggle Buttons */}
-          <div className="flex gap-2 pointer-events-auto">
+          <div className="flex gap-3 pointer-events-auto">
             <Button
               onClick={() => onToggleMenu('inventory')}
-              size="sm"
+              size="default"
               variant="outline"
-              className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm"
+              className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm px-4 py-3"
               title="Toggle Inventory (I)"
             >
               <img 
                 src={inventoryBag} 
                 alt="Inventory" 
-                className="w-4 h-4" 
+                className="w-6 h-6" 
                 style={{ imageRendering: 'pixelated' }}
               />
             </Button>
             <Button
               onClick={() => onToggleMenu('stats')}
-              size="sm"
+              size="default"
               variant="outline"
-              className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm"
+              className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm px-4 py-3"
               title="Toggle Character Stats (C)"
             >
-              <Heart className="w-4 h-4" />
+              <Heart className="w-6 h-6" />
             </Button>
             <Button
               onClick={() => onToggleMenu('log')}
-              size="sm"
+              size="default"
               variant="outline"
-              className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm"
+              className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm px-4 py-3"
               title="Toggle Combat Log (L)"
             >
-              <ScrollText className="w-4 h-4" />
+              <ScrollText className="w-6 h-6" />
             </Button>
           </div>
 
