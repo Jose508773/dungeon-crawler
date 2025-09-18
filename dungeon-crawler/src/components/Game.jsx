@@ -160,6 +160,12 @@ const Game = () => {
     if (gameState !== 'playing' || isMoving) return;
     
     setIsMoving(true);
+    
+    // Safety timeout to prevent permanent movement lock
+    const movementTimeout = setTimeout(() => {
+      setIsMoving(false);
+      console.warn('Movement timeout triggered - unlocking movement');
+    }, 2000); // 2 second timeout
 
     setPlayer(prevPlayer => {
       const newX = prevPlayer.x + dx;
@@ -167,12 +173,14 @@ const Game = () => {
       
       // Check bounds
       if (newX < 0 || newX >= BOARD_WIDTH || newY < 0 || newY >= BOARD_HEIGHT) {
+        clearTimeout(movementTimeout);
         setIsMoving(false);
         return prevPlayer;
       }
       
       // Check for walls
       if (dungeon[newY] && dungeon[newY][newX] === 'wall') {
+        clearTimeout(movementTimeout);
         setIsMoving(false);
         return prevPlayer;
       }
@@ -191,8 +199,8 @@ const Game = () => {
         direction
       };
 
-      // Handle combat when moving - use requestAnimationFrame for better performance
-      requestAnimationFrame(() => {
+      // Handle combat when moving - use try/catch to ensure movement is always unlocked
+      try {
         const combatResults = CombatSystem.handleAutoCombat(newPlayer, enemies);
         
         if (combatResults.length > 0) {
@@ -234,10 +242,13 @@ const Game = () => {
             addCombatMessage(rewards.levelUp.message);
           }
         }
-        
-        // Re-enable movement after combat processing
+      } catch (error) {
+        console.error('Combat processing error:', error);
+      } finally {
+        // Always re-enable movement, even if there's an error
+        clearTimeout(movementTimeout);
         setIsMoving(false);
-      });
+      }
       
       return newPlayer;
     });
