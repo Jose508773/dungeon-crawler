@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import GameBoard from './GameBoard';
 import GameHUD from './GameHUD';
 import MenuPanel from './MenuPanel';
@@ -53,6 +53,13 @@ const Game = () => {
   
   // Simple UI visibility toggle (currently unused but kept for future features)
   const [_showUI, setShowUI] = useState(true);
+
+  // Performance optimization refs
+  const movementTimeoutRef = useRef(null);
+  const enemyTurnTimeoutRef = useRef(null);
+  const interactionTimeoutRef = useRef(null);
+  const lastMoveTimeRef = useRef(0);
+  const combatProcessingRef = useRef(false);
 
   // Menu state
   const [openMenus, setOpenMenus] = useState({
@@ -155,17 +162,29 @@ const Game = () => {
     }
   }, [gameState]);
 
-  // Handle player movement
+  // Handle player movement with optimizations
   const movePlayer = useCallback((dx, dy) => {
-    if (gameState !== 'playing' || isMoving) return;
+    // Performance checks
+    if (gameState !== 'playing' || isMoving || combatProcessingRef.current) return;
+    
+    const now = Date.now();
+    if (now - lastMoveTimeRef.current < 50) return; // Throttle movement to prevent spam
+    lastMoveTimeRef.current = now;
     
     setIsMoving(true);
+    combatProcessingRef.current = true;
+    
+    // Clear any existing timeout
+    if (movementTimeoutRef.current) {
+      clearTimeout(movementTimeoutRef.current);
+    }
     
     // Safety timeout to prevent permanent movement lock
-    const movementTimeout = setTimeout(() => {
+    movementTimeoutRef.current = setTimeout(() => {
       setIsMoving(false);
+      combatProcessingRef.current = false;
       console.warn('Movement timeout triggered - unlocking movement');
-    }, 2000); // 2 second timeout
+    }, 1500); // Reduced to 1.5 seconds for better responsiveness
 
     setPlayer(prevPlayer => {
       const newX = prevPlayer.x + dx;
@@ -173,15 +192,17 @@ const Game = () => {
       
       // Check bounds
       if (newX < 0 || newX >= BOARD_WIDTH || newY < 0 || newY >= BOARD_HEIGHT) {
-        clearTimeout(movementTimeout);
+        if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
         setIsMoving(false);
+        combatProcessingRef.current = false;
         return prevPlayer;
       }
       
       // Check for walls
       if (dungeon[newY] && dungeon[newY][newX] === 'wall') {
-        clearTimeout(movementTimeout);
+        if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
         setIsMoving(false);
+        combatProcessingRef.current = false;
         return prevPlayer;
       }
       
@@ -199,16 +220,16 @@ const Game = () => {
         direction
       };
 
-      // Handle combat when moving - use try/catch to ensure movement is always unlocked
+      // Handle combat when moving - optimized with batched updates
       try {
         const combatResults = CombatSystem.handleAutoCombat(newPlayer, enemies);
         
-        if (combatResults.length > 0) {
-          // Update enemies after combat
-          setEnemies(prevEnemies => prevEnemies.filter(enemy => enemy.isAlive));
-          
-          // Apply rewards and update player
+        if (combatResults && combatResults.length > 0) {
+          // Batch all state updates to prevent multiple re-renders
           const rewards = CombatSystem.applyRewards(newPlayer, combatResults);
+          
+          // Single batched update for better performance
+          setEnemies(prevEnemies => prevEnemies.filter(enemy => enemy.isAlive));
           
           setPlayer(prev => {
             const updatedPlayer = {
@@ -231,23 +252,37 @@ const Game = () => {
             return updatedPlayer;
           });
           
-          // Add combat messages
-          combatResults.forEach(result => addCombatMessage(result.message));
+          // Batch combat messages to prevent excessive re-renders
+          const messages = [];
+          combatResults.forEach(result => {
+            if (result.message) messages.push(result.message);
+          });
           
           if (rewards.experience > 0) {
-            addCombatMessage(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
+            messages.push(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
           }
           
-          if (rewards.levelUp.leveledUp) {
-            addCombatMessage(rewards.levelUp.message);
+          if (rewards.levelUp && rewards.levelUp.leveledUp) {
+            messages.push(rewards.levelUp.message);
+          }
+          
+          // Add all messages at once
+          if (messages.length > 0) {
+            setCombatLog(prev => {
+              const newMessages = messages.map(message => ({ message, turn }));
+              return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
+            });
           }
         }
       } catch (error) {
         console.error('Combat processing error:', error);
+        // Reset game state on critical error
+        setGameState('paused');
       } finally {
         // Always re-enable movement, even if there's an error
-        clearTimeout(movementTimeout);
+        if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
         setIsMoving(false);
+        combatProcessingRef.current = false;
       }
       
       return newPlayer;
@@ -255,119 +290,165 @@ const Game = () => {
     
     // Increment turn counter
     setTurn(prevTurn => prevTurn + 1);
-  }, [gameState, dungeon, enemies, isMoving, addCombatMessage]);
+  }, [gameState, dungeon, enemies, isMoving, addCombatMessage, turn]);
 
-  // Handle enemy turns
+  // Handle enemy turns with optimization
   useEffect(() => {
-    if (gameState !== 'playing' || turn === 0) return;
+    if (gameState !== 'playing' || turn === 0 || combatProcessingRef.current) return;
 
-    const enemyTurnTimer = setTimeout(() => {
-      setEnemies(prevEnemies => {
-        const newEnemies = [...prevEnemies];
-        
-        // Move each enemy
-        newEnemies.forEach(enemy => {
-          const move = enemy.getNextMove(dungeon, newEnemies, player, turn);
-          if (move) {
-            enemy.x = move.x;
-            enemy.y = move.y;
-          }
-        });
-        
-        // Handle enemy attacks
-        const combatResults = CombatSystem.handleEnemyTurnCombat(newEnemies, player);
-        
-        if (combatResults.length > 0) {
-          combatResults.forEach(result => addCombatMessage(result.message));
+    // Clear any existing enemy turn timeout
+    if (enemyTurnTimeoutRef.current) {
+      clearTimeout(enemyTurnTimeoutRef.current);
+    }
+
+    enemyTurnTimeoutRef.current = setTimeout(() => {
+      try {
+        setEnemies(prevEnemies => {
+          if (prevEnemies.length === 0) return prevEnemies;
           
-          // Update player health and check for game over in one operation
-          setPlayer(prev => {
-            const updatedPlayer = { ...prev };
-            let totalDamage = 0;
-            
-            combatResults.forEach(result => {
-              if (result.damage) {
-                totalDamage += result.damage;
+          const newEnemies = [...prevEnemies];
+          let anyEnemyMoved = false;
+          
+          // Move each enemy with error handling
+          newEnemies.forEach(enemy => {
+            try {
+              if (enemy && enemy.isAlive && enemy.getNextMove) {
+                const move = enemy.getNextMove(dungeon, newEnemies, player, turn);
+                if (move && move.x !== undefined && move.y !== undefined) {
+                  enemy.x = move.x;
+                  enemy.y = move.y;
+                  anyEnemyMoved = true;
+                }
               }
-            });
-            
-            updatedPlayer.health = Math.max(0, updatedPlayer.health - totalDamage);
-            
-            // Check for game over
-            if (updatedPlayer.health <= 0) {
-              setGameState('gameOver');
-              addCombatMessage('Game Over! You have been defeated.');
+            } catch (error) {
+              console.warn('Enemy movement error:', error);
+              // Continue with other enemies
             }
-            
-            return updatedPlayer;
           });
-        }
-        
-        return newEnemies;
-      });
-    }, 500); // Delay enemy turns slightly for better UX
+          
+          // Handle enemy attacks only if enemies moved
+          if (anyEnemyMoved) {
+            try {
+              const combatResults = CombatSystem.handleEnemyTurnCombat(newEnemies, player);
+              
+              if (combatResults && combatResults.length > 0) {
+                // Batch all combat messages
+                const messages = combatResults
+                  .filter(result => result && result.message)
+                  .map(result => result.message);
+                
+                if (messages.length > 0) {
+                  setCombatLog(prev => {
+                    const newMessages = messages.map(message => ({ message, turn }));
+                    return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
+                  });
+                }
+                
+                // Calculate total damage
+                const totalDamage = combatResults
+                  .filter(result => result && result.damage)
+                  .reduce((sum, result) => sum + result.damage, 0);
+                
+                if (totalDamage > 0) {
+                  setPlayer(prev => {
+                    const newHealth = Math.max(0, prev.health - totalDamage);
+                    
+                    // Check for game over
+                    if (newHealth <= 0) {
+                      setGameState('gameOver');
+                      setCombatLog(prevLog => [...prevLog.slice(-9), { message: 'Game Over! You have been defeated.', turn }]);
+                    }
+                    
+                    return { ...prev, health: newHealth };
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Enemy combat error:', error);
+            }
+          }
+          
+          return newEnemies;
+        });
+      } catch (error) {
+        console.error('Enemy turn error:', error);
+        // Pause game on critical error
+        setGameState('paused');
+      }
+    }, 300); // Reduced delay for better responsiveness
 
-    return () => clearTimeout(enemyTurnTimer);
-  }, [turn, gameState, dungeon, player, addCombatMessage]);
+    return () => {
+      if (enemyTurnTimeoutRef.current) {
+        clearTimeout(enemyTurnTimeoutRef.current);
+      }
+    };
+  }, [turn, gameState, dungeon, player]);
 
-  // Handle keyboard input with debouncing
+  // Handle keyboard input with optimized debouncing
   useEffect(() => {
     let lastKeyPress = 0;
-    const DEBOUNCE_TIME = 100; // 100ms debounce
+    const DEBOUNCE_TIME = 75; // Reduced debounce for better responsiveness
     
     const handleKeyPress = (event) => {
-      if (gameState !== 'playing') return;
+      if (gameState !== 'playing' || isMoving || combatProcessingRef.current) return;
       
       const now = Date.now();
       if (now - lastKeyPress < DEBOUNCE_TIME) return;
       lastKeyPress = now;
       
-      switch (event.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
-          event.preventDefault();
-          movePlayer(0, -1);
-          break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
-          event.preventDefault();
-          movePlayer(0, 1);
-          break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
-          event.preventDefault();
-          movePlayer(-1, 0);
-          break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
-          event.preventDefault();
-          movePlayer(1, 0);
-          break;
-        case ' ':
-          event.preventDefault();
-          // Wait/skip turn
-          setTurn(prevTurn => prevTurn + 1);
-          break;
-        case 'Tab':
-        case 'h':
-        case 'H':
-          event.preventDefault();
-          toggleUI();
-          break;
-        case 'Escape':
-          event.preventDefault();
-          setGameState(prev => prev === 'paused' ? 'playing' : 'paused');
-          break;
+      try {
+        switch (event.key) {
+          case 'ArrowUp':
+          case 'w':
+          case 'W':
+            event.preventDefault();
+            movePlayer(0, -1);
+            break;
+          case 'ArrowDown':
+          case 's':
+          case 'S':
+            event.preventDefault();
+            movePlayer(0, 1);
+            break;
+          case 'ArrowLeft':
+          case 'a':
+          case 'A':
+            event.preventDefault();
+            movePlayer(-1, 0);
+            break;
+          case 'ArrowRight':
+          case 'd':
+          case 'D':
+            event.preventDefault();
+            movePlayer(1, 0);
+            break;
+          case ' ':
+            event.preventDefault();
+            // Wait/skip turn - throttled
+            if (now - lastMoveTimeRef.current > 200) {
+              setTurn(prevTurn => prevTurn + 1);
+              lastMoveTimeRef.current = now;
+            }
+            break;
+          case 'Tab':
+          case 'h':
+          case 'H':
+            event.preventDefault();
+            toggleUI();
+            break;
+          case 'Escape':
+            event.preventDefault();
+            setGameState(prev => prev === 'paused' ? 'playing' : 'paused');
+            break;
+        }
+      } catch (error) {
+        console.error('Keyboard input error:', error);
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
+    window.addEventListener('keydown', handleKeyPress, { passive: false });
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState, movePlayer, toggleUI]);
+  }, [gameState, movePlayer, toggleUI, isMoving]);
 
   // Handle tile interactions
   const handleTileInteraction = useCallback((x, y) => {
@@ -433,24 +514,57 @@ const Game = () => {
     }
   }, [dungeon, dungeonLevel, inventory, turn, generateNewDungeon]);
 
-  // Check for interactions when player moves
+  // Check for interactions when player moves - optimized
   useEffect(() => {
-    if (gameState !== 'playing' || isMoving) return;
-    if (dungeon[player.y] && dungeon[player.y][player.x]) {
-      const currentTile = dungeon[player.y][player.x];
-      if (currentTile === 'chest' || currentTile === 'stairs') {
-        // Add a small delay to prevent interaction during movement
-        const interactionTimer = setTimeout(() => {
-          handleTileInteraction(player.x, player.y);
-        }, 50);
-        
-        return () => clearTimeout(interactionTimer);
+    if (gameState !== 'playing' || isMoving || combatProcessingRef.current) return;
+    if (!dungeon[player.y] || !dungeon[player.y][player.x]) return;
+    
+    const currentTile = dungeon[player.y][player.x];
+    if (currentTile === 'chest' || currentTile === 'stairs') {
+      // Clear any existing interaction timeout
+      if (interactionTimeoutRef.current) {
+        clearTimeout(interactionTimeoutRef.current);
       }
+      
+      // Add a small delay to prevent interaction during movement
+      interactionTimeoutRef.current = setTimeout(() => {
+        try {
+          handleTileInteraction(player.x, player.y);
+        } catch (error) {
+          console.error('Tile interaction error:', error);
+        }
+      }, 100);
+      
+      return () => {
+        if (interactionTimeoutRef.current) {
+          clearTimeout(interactionTimeoutRef.current);
+        }
+      };
     }
   }, [player.x, player.y, gameState, dungeon, handleTileInteraction, isMoving]);
 
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clean up all timeouts on component unmount
+      if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
+      if (enemyTurnTimeoutRef.current) clearTimeout(enemyTurnTimeoutRef.current);
+      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    };
+  }, []);
+
   // Reset game function
   const resetGame = useCallback(() => {
+    // Clear all timeouts
+    if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
+    if (enemyTurnTimeoutRef.current) clearTimeout(enemyTurnTimeoutRef.current);
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    
+    // Reset refs
+    combatProcessingRef.current = false;
+    lastMoveTimeRef.current = 0;
+    
+    // Reset state
     setPlayer(initialPlayer);
     setInventory(initialInventory);
     setEnemies([]);
