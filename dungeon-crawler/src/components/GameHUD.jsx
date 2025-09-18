@@ -5,13 +5,15 @@ import {
   Heart, 
   Star, 
   Coins, 
-  Package, 
   ScrollText, 
   Settings,
   X,
   Pause,
   Play
 } from 'lucide-react';
+
+// Import bag icon
+import inventoryBag from '../assets/sprites/ui/inventory_bag.png';
 
 const GameHUD = ({ 
   player, 
@@ -86,7 +88,12 @@ const GameHUD = ({
               className="bg-black/70 border-orange-500/30 hover:bg-orange-500/20 backdrop-blur-sm"
               title="Toggle Inventory (I)"
             >
-              <Package className="w-4 h-4" />
+              <img 
+                src={inventoryBag} 
+                alt="Inventory" 
+                className="w-4 h-4" 
+                style={{ imageRendering: 'pixelated' }}
+              />
             </Button>
             <Button
               onClick={() => onToggleMenu('stats')}

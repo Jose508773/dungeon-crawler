@@ -12,7 +12,20 @@ import { generateDungeon } from '../utils/DungeonGenerator';
 import { createEnemy, getRandomEnemyType } from '../utils/EnemySystem';
 import { CombatSystem } from '../utils/CombatSystem';
 import { getChestLoot, applyItemStats, removeItemStats, ITEM_TYPES } from '../utils/ItemSystem';
-import { Heart, Package, ScrollText, Eye, EyeOff } from 'lucide-react';
+import { Heart, ScrollText, Eye, EyeOff } from 'lucide-react';
+
+// Import bag icon
+import inventoryBag from '../assets/sprites/ui/inventory_bag.png';
+
+// Custom bag icon component
+const BagIcon = ({ className }) => (
+  <img 
+    src={inventoryBag} 
+    alt="Inventory" 
+    className={className}
+    style={{ imageRendering: 'pixelated' }}
+  />
+);
 
 // Game constants
 const BOARD_WIDTH = 15;
@@ -557,7 +570,7 @@ const Game = () => {
         isOpen={openMenus.inventory}
         onClose={() => toggleMenu('inventory')}
         title="Inventory"
-        icon={Package}
+        icon={BagIcon}
         position="left"
       >
         <Inventory 
