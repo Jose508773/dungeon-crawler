@@ -60,6 +60,12 @@ const Game = () => {
   const interactionTimeoutRef = useRef(null);
   const lastMoveTimeRef = useRef(0);
   const combatProcessingRef = useRef(false);
+  const turnRef = useRef(0);
+  
+  // Keep turnRef in sync with turn state
+  useEffect(() => {
+    turnRef.current = turn;
+  }, [turn]);
 
   // Menu state
   const [openMenus, setOpenMenus] = useState({
@@ -86,10 +92,6 @@ const Game = () => {
     setGameState(prev => prev === 'paused' ? 'playing' : 'paused');
   };
 
-  // Add message to combat log
-  const addCombatMessage = useCallback((message) => {
-    setCombatLog(prev => [...prev.slice(-9), { message, turn }]);
-  }, [turn]);
 
   // Handle item usage
   const handleUseItem = useCallback((item, index) => {
@@ -99,7 +101,7 @@ const Game = () => {
           const newHealth = Math.min(prev.maxHealth, prev.health + item.health);
           return { ...prev, health: newHealth };
         });
-        addCombatMessage(`Used ${item.name}! Restored ${item.health} health.`);
+        setCombatLog(prev => [...prev.slice(-9), { message: `Used ${item.name}! Restored ${item.health} health.`, turn: turnRef.current }]);
       }
       
       // Remove item from inventory
@@ -108,7 +110,7 @@ const Game = () => {
         items: prev.items.filter((_, i) => i !== index)
       }));
     }
-  }, [addCombatMessage]);
+  }, []);
 
   // Handle unequipping items
   const handleUnequipItem = useCallback((itemType) => {
@@ -116,14 +118,14 @@ const Game = () => {
       const weaponName = inventory.weapon.name;
       setPlayer(prev => removeItemStats({ ...prev }, inventory.weapon));
       setInventory(prev => ({ ...prev, weapon: null }));
-      addCombatMessage(`Unequipped ${weaponName}`);
+      setCombatLog(prev => [...prev.slice(-9), { message: `Unequipped ${weaponName}`, turn: turnRef.current }]);
     } else if (itemType === 'armor' && inventory.armor) {
       const armorName = inventory.armor.name;
       setPlayer(prev => removeItemStats({ ...prev }, inventory.armor));
       setInventory(prev => ({ ...prev, armor: null }));
-      addCombatMessage(`Unequipped ${armorName}`);
+      setCombatLog(prev => [...prev.slice(-9), { message: `Unequipped ${armorName}`, turn: turnRef.current }]);
     }
-  }, [inventory.weapon, inventory.armor, addCombatMessage]);
+  }, [inventory.weapon, inventory.armor]);
 
   // Generate a new dungeon level with enemy limit
   const generateNewDungeon = useCallback((level = 1) => {
@@ -258,7 +260,7 @@ const Game = () => {
             // Check for game over
             if (updatedPlayer.health <= 0) {
               setGameState('gameOver');
-              addCombatMessage('Game Over! You have been defeated.');
+              setCombatLog(prev => [...prev.slice(-9), { message: 'Game Over! You have been defeated.', turn: turnRef.current + 1 }]);
             }
             
             return updatedPlayer;
@@ -267,21 +269,24 @@ const Game = () => {
           // Batch combat messages to prevent excessive re-renders
           const messages = [];
           combatResults.forEach(result => {
-            if (result.message) messages.push(result.message);
+            if (result && result.message) messages.push(result.message);
           });
           
-          if (rewards.experience > 0) {
+          if (rewards && rewards.experience > 0) {
             messages.push(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
           }
           
-          if (rewards.levelUp && rewards.levelUp.leveledUp) {
+          if (rewards && rewards.levelUp && rewards.levelUp.leveledUp) {
             messages.push(rewards.levelUp.message);
           }
           
           // Add all messages at once
           if (messages.length > 0) {
             setCombatLog(prev => {
-              const newMessages = messages.map(message => ({ message, turn }));
+              const newMessages = messages.map((message, index) => ({ 
+                message, 
+                turn: turnRef.current + 1 + index
+              }));
               return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
             });
           }
@@ -302,71 +307,16 @@ const Game = () => {
     
     // Increment turn counter
     setTurn(prevTurn => prevTurn + 1);
-  }, [gameState, dungeon, enemies, isMoving, addCombatMessage, turn]);
+  }, [gameState, dungeon, enemies, isMoving]);
 
-  // Handle enemy turns with optimization - TEMPORARILY DISABLED FOR DEBUGGING
+  // Handle enemy turns - DISABLED FOR STABILITY
   useEffect(() => {
-    if (gameState !== 'playing' || turn === 0 || combatProcessingRef.current) return;
+    if (gameState !== 'playing' || turn === 0) return;
 
     // TEMPORARY: Disable enemy AI to isolate the performance issue
     console.log('Enemy turn skipped for debugging - Turn:', turn);
-    return;
-
-    // Clear any existing enemy turn timeout
-    if (enemyTurnTimeoutRef.current) {
-      clearTimeout(enemyTurnTimeoutRef.current);
-    }
-
-    enemyTurnTimeoutRef.current = setTimeout(() => {
-      try {
-        setEnemies(prevEnemies => {
-          if (prevEnemies.length === 0) return prevEnemies;
-          
-          const newEnemies = [...prevEnemies];
-          let anyEnemyMoved = false;
-          
-          // Move each enemy with error handling - LIMITED TO 3 ENEMIES MAX
-          const activeEnemies = newEnemies.slice(0, 3);
-          activeEnemies.forEach((enemy, index) => {
-            try {
-              if (enemy && enemy.isAlive && enemy.getNextMove && index < 3) {
-                const startTime = performance.now();
-                const move = enemy.getNextMove(dungeon, newEnemies, player, turn);
-                const endTime = performance.now();
-                
-                // If enemy AI takes too long, skip it
-                if (endTime - startTime > 50) {
-                  console.warn(`Enemy ${enemy.id} AI took too long: ${endTime - startTime}ms`);
-                  return;
-                }
-                
-                if (move && move.x !== undefined && move.y !== undefined) {
-                  enemy.x = move.x;
-                  enemy.y = move.y;
-                  anyEnemyMoved = true;
-                }
-              }
-            } catch (error) {
-              console.warn('Enemy movement error:', error);
-              // Continue with other enemies
-            }
-          });
-          
-          return newEnemies;
-        });
-      } catch (error) {
-        console.error('Enemy turn error:', error);
-        // Pause game on critical error
-        setGameState('paused');
-      }
-    }, 500); // Increased delay to reduce load
-
-    return () => {
-      if (enemyTurnTimeoutRef.current) {
-        clearTimeout(enemyTurnTimeoutRef.current);
-      }
-    };
-  }, [turn, gameState, dungeon, player]);
+    // Enemy AI will be re-enabled once stability is confirmed
+  }, [turn, gameState]);
 
   // Handle keyboard input with optimized debouncing
   useEffect(() => {
@@ -511,7 +461,7 @@ const Game = () => {
       }
       
       // Add a small delay to prevent interaction during movement
-      interactionTimeoutRef.current = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         try {
           handleTileInteraction(player.x, player.y);
         } catch (error) {
@@ -519,21 +469,25 @@ const Game = () => {
         }
       }, 100);
       
+      interactionTimeoutRef.current = timeoutId;
+      
       return () => {
-        if (interactionTimeoutRef.current) {
-          clearTimeout(interactionTimeoutRef.current);
-        }
+        clearTimeout(timeoutId);
       };
     }
   }, [player.x, player.y, gameState, dungeon, handleTileInteraction, isMoving]);
 
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
+    const movementTimeout = movementTimeoutRef.current;
+    const enemyTimeout = enemyTurnTimeoutRef.current;
+    const interactionTimeout = interactionTimeoutRef.current;
+    
     return () => {
       // Clean up all timeouts on component unmount
-      if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
-      if (enemyTurnTimeoutRef.current) clearTimeout(enemyTurnTimeoutRef.current);
-      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+      if (movementTimeout) clearTimeout(movementTimeout);
+      if (enemyTimeout) clearTimeout(enemyTimeout);
+      if (interactionTimeout) clearTimeout(interactionTimeout);
     };
   }, []);
 
@@ -588,7 +542,6 @@ const Game = () => {
         </div>
       </div>
 
-      {/* HUD Overlay */}
       {/* HUD Overlay */}
       <GameHUD
         player={player}
@@ -651,4 +604,3 @@ const Game = () => {
 };
 
 export default Game;
-
