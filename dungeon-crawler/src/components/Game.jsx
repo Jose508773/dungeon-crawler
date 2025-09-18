@@ -79,6 +79,11 @@ const Game = () => {
     setGameState(prev => prev === 'paused' ? 'playing' : 'paused');
   };
 
+  // Add message to combat log
+  const addCombatMessage = useCallback((message) => {
+    setCombatLog(prev => [...prev.slice(-9), { message, turn }]);
+  }, [turn]);
+
   // Handle item usage
   const handleUseItem = useCallback((item, index) => {
     if (item.type === 'consumable') {
@@ -149,11 +154,6 @@ const Game = () => {
       setIsMoving(false);
     }
   }, [gameState]);
-
-  // Add message to combat log
-  const addCombatMessage = useCallback((message) => {
-    setCombatLog(prev => [...prev.slice(-9), { message, turn }]);
-  }, [turn]);
 
   // Handle player movement
   const movePlayer = useCallback((dx, dy) => {
