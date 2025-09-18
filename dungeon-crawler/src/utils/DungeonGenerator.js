@@ -257,10 +257,14 @@ export class DungeonGenerator {
     // Place special items
     this.placeSpecialItems();
 
+    // CRITICAL: Ensure stairs are accessible
+    const playerStart = this.findSafePlayerStart();
+    this.ensureStairsAccessible(playerStart);
+
     return {
       dungeon: this.dungeon,
       enemySpawns: this.generateEnemySpawns(),
-      playerStart: this.findSafePlayerStart()
+      playerStart: playerStart
     };
   }
 
@@ -362,27 +366,27 @@ export class DungeonGenerator {
 
     if (floorTiles.length === 0) return;
 
-    // Try to connect isolated areas by creating corridors - REDUCED ATTEMPTS
-    const maxAttempts = 5; // Reduced from 20 to 5
+    // Always ensure basic connectivity - simplified approach
+    const maxAttempts = 3; // Further reduced for performance
     let attempts = 0;
 
     while (attempts < maxAttempts) {
       attempts++;
       
-      // Skip connectivity check if too many floor tiles (performance optimization)
-      if (floorTiles.length > 50) {
-        console.log('Skipping connectivity check for large dungeon');
-        break;
-      }
-      
       try {
-        if (this.checkConnectivity()) break;
+        // For small dungeons, do full connectivity check
+        if (floorTiles.length <= 30) {
+          if (this.checkConnectivity()) break;
+        } else {
+          // For large dungeons, just create a few connecting corridors
+          console.log('Large dungeon detected, creating basic connections');
+        }
       } catch (error) {
         console.warn('Connectivity check failed:', error);
         break;
       }
       
-      // Pick two random floor tiles
+      // Pick two random floor tiles and connect them
       const tile1 = floorTiles[this.randomInt(0, floorTiles.length - 1)];
       const tile2 = floorTiles[this.randomInt(0, floorTiles.length - 1)];
       
@@ -395,6 +399,125 @@ export class DungeonGenerator {
       } catch (error) {
         console.warn('Corridor creation failed:', error);
         break;
+      }
+    }
+  }
+
+  // Ensure stairs are accessible from player start
+  ensureStairsAccessible(playerStart) {
+    // Find stairs position
+    let stairsPos = null;
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.dungeon[y][x] === TILES.STAIRS) {
+          stairsPos = { x, y };
+          break;
+        }
+      }
+      if (stairsPos) break;
+    }
+
+    if (!stairsPos) return; // No stairs found
+
+    // Check if stairs are reachable using pathfinding
+    if (!this.isPathAccessible(playerStart, stairsPos)) {
+      console.log('Stairs not accessible, creating path...');
+      this.createDirectPath(playerStart, stairsPos);
+      
+      // Ensure stairs have accessible area around them
+      this.clearAreaAroundStairs(stairsPos);
+    }
+  }
+
+  // Check if a path exists between two points using BFS
+  isPathAccessible(start, end) {
+    if (!start || !end) return false;
+    
+    const queue = [start];
+    const visited = new Set();
+    visited.add(`${start.x},${start.y}`);
+
+    const directions = [
+      { x: 0, y: -1 }, { x: 0, y: 1 },
+      { x: -1, y: 0 }, { x: 1, y: 0 }
+    ];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      
+      // Found the target
+      if (current.x === end.x && current.y === end.y) {
+        return true;
+      }
+
+      // Check all adjacent tiles
+      for (const dir of directions) {
+        const newX = current.x + dir.x;
+        const newY = current.y + dir.y;
+        const key = `${newX},${newY}`;
+
+        // Check bounds
+        if (newX < 0 || newX >= this.width || newY < 0 || newY >= this.height) {
+          continue;
+        }
+
+        // Skip if already visited
+        if (visited.has(key)) continue;
+
+        // Check if tile is passable (floor, stairs, chest)
+        const tile = this.dungeon[newY][newX];
+        if (tile === TILES.FLOOR || tile === TILES.STAIRS || tile === TILES.CHEST) {
+          visited.add(key);
+          queue.push({ x: newX, y: newY });
+        }
+      }
+    }
+
+    return false; // No path found
+  }
+
+  // Create a direct path between two points
+  createDirectPath(start, end) {
+    // Create horizontal path first
+    const startX = Math.min(start.x, end.x);
+    const endX = Math.max(start.x, end.x);
+    for (let x = startX; x <= endX; x++) {
+      if (this.dungeon[start.y] && this.dungeon[start.y][x] === TILES.WALL) {
+        this.dungeon[start.y][x] = TILES.FLOOR;
+      }
+    }
+
+    // Create vertical path
+    const startY = Math.min(start.y, end.y);
+    const endY = Math.max(start.y, end.y);
+    for (let y = startY; y <= endY; y++) {
+      if (this.dungeon[y] && this.dungeon[y][end.x] === TILES.WALL) {
+        this.dungeon[y][end.x] = TILES.FLOOR;
+      }
+    }
+  }
+
+  // Clear area around stairs to ensure accessibility
+  clearAreaAroundStairs(stairsPos) {
+    const directions = [
+      { x: 0, y: -1 }, { x: 0, y: 1 },
+      { x: -1, y: 0 }, { x: 1, y: 0 },
+      { x: -1, y: -1 }, { x: 1, y: -1 },
+      { x: -1, y: 1 }, { x: 1, y: 1 }
+    ];
+
+    // Clear at least one adjacent tile to stairs
+    for (const dir of directions) {
+      const newX = stairsPos.x + dir.x;
+      const newY = stairsPos.y + dir.y;
+
+      // Check bounds
+      if (newX > 0 && newX < this.width - 1 && newY > 0 && newY < this.height - 1) {
+        if (this.dungeon[newY][newX] === TILES.WALL) {
+          this.dungeon[newY][newX] = TILES.FLOOR;
+          console.log(`Cleared wall at (${newX}, ${newY}) near stairs`);
+          break; // Only clear one tile to maintain dungeon structure
+        }
       }
     }
   }
