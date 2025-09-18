@@ -28,49 +28,60 @@ export const WEAPONS = {
     sprite: 'iron_sword.png',
     description: 'A reliable iron sword'
   },
-  steel_sword: {
-    id: 'steel_sword',
-    name: 'Steel Sword',
+  royal_sword: {
+    id: 'royal_sword',
+    name: 'Royal Sword',
     type: ITEM_TYPES.WEAPON,
     rarity: ITEM_RARITY.UNCOMMON,
-    attack: 22,
-    defense: 0,
-    value: 120,
-    sprite: 'iron_sword.png', // Using same sprite for now
-    description: 'A well-crafted steel sword'
+    attack: 25,
+    defense: 2,
+    value: 150,
+    sprite: 'royal_sword.png',
+    description: 'An ornate sword fit for nobility'
   },
   enchanted_blade: {
     id: 'enchanted_blade',
     name: 'Enchanted Blade',
     type: ITEM_TYPES.WEAPON,
     rarity: ITEM_RARITY.RARE,
-    attack: 30,
+    attack: 35,
     defense: 0,
     value: 300,
-    sprite: 'iron_sword.png',
+    sprite: 'enchanted_blade.png',
     description: 'A blade imbued with magical power'
   },
-  dragon_slayer: {
-    id: 'dragon_slayer',
-    name: 'Dragon Slayer',
+  spiked_mace: {
+    id: 'spiked_mace',
+    name: 'Spiked Mace',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.RARE,
+    attack: 40,
+    defense: 0,
+    value: 350,
+    sprite: 'spiked_mace.png',
+    description: 'A brutal weapon with devastating spikes'
+  },
+  battle_axe: {
+    id: 'battle_axe',
+    name: 'Battle Axe',
     type: ITEM_TYPES.WEAPON,
     rarity: ITEM_RARITY.EPIC,
-    attack: 45,
+    attack: 50,
     defense: 0,
-    value: 800,
-    sprite: 'iron_sword.png',
-    description: 'A legendary sword that has slain dragons'
+    value: 600,
+    sprite: 'battle_axe.png',
+    description: 'A mighty axe that cleaves through enemies'
   },
-  ancient_sword: {
-    id: 'ancient_sword',
-    name: 'Ancient Sword',
+  crystal_spear: {
+    id: 'crystal_spear',
+    name: 'Crystal Spear',
     type: ITEM_TYPES.WEAPON,
     rarity: ITEM_RARITY.LEGENDARY,
-    attack: 60,
-    defense: 0,
-    value: 1500,
-    sprite: 'iron_sword.png',
-    description: 'An ancient weapon of immense power'
+    attack: 65,
+    defense: 5,
+    value: 1200,
+    sprite: 'crystal_spear.png',
+    description: 'A mystical spear infused with crystal magic'
   }
 };
 

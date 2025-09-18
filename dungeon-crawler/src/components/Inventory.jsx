@@ -4,6 +4,11 @@ import { Package, Sword, Shield, Zap } from 'lucide-react';
 
 // Import item sprites
 import ironSword from '../assets/sprites/items/iron_sword.png';
+import royalSword from '../assets/sprites/items/royal_sword.png';
+import enchantedBlade from '../assets/sprites/items/enchanted_blade.png';
+import spikedMace from '../assets/sprites/items/spiked_mace.png';
+import battleAxe from '../assets/sprites/items/battle_axe.png';
+import crystalSpear from '../assets/sprites/items/crystal_spear.png';
 import leatherArmor from '../assets/sprites/items/leather_armor.png';
 import healthPotion from '../assets/sprites/items/health_potion.png';
 import inventorySlot from '../assets/sprites/ui/inventory_slot.png';
@@ -32,10 +37,21 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem }) => {
   };
 
   const getItemSprite = (item) => {
+    // Weapon sprites
     if (item.sprite === 'iron_sword.png') return ironSword;
+    if (item.sprite === 'royal_sword.png') return royalSword;
+    if (item.sprite === 'enchanted_blade.png') return enchantedBlade;
+    if (item.sprite === 'spiked_mace.png') return spikedMace;
+    if (item.sprite === 'battle_axe.png') return battleAxe;
+    if (item.sprite === 'crystal_spear.png') return crystalSpear;
+    
+    // Armor sprites
     if (item.sprite === 'leather_armor.png') return leatherArmor;
+    
+    // Consumable sprites
     if (item.sprite === 'health_potion.png') return healthPotion;
-    // Fallback to iron sword for now
+    
+    // Fallback to iron sword
     return ironSword;
   };
 
