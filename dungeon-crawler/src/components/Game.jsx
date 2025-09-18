@@ -139,9 +139,9 @@ const Game = () => {
       direction: 'front'
     }));
     
-    // Add log message
-    addCombatMessage(`Entered dungeon level ${level}`);
-  }, [addCombatMessage]);
+    // Add log message directly to avoid circular dependency
+    setCombatLog(prev => [...prev.slice(-9), { message: `Entered dungeon level ${level}`, turn: 0 }]);
+  }, []);
 
   // Initialize dungeon on component mount
   useEffect(() => {
@@ -405,7 +405,7 @@ const Game = () => {
         }
       });
       
-      addCombatMessage(message);
+      setCombatLog(prev => [...prev.slice(-9), { message, turn }]);
       
       // Remove chest from dungeon
       setDungeon(prev => {
@@ -418,9 +418,9 @@ const Game = () => {
       const nextLevel = dungeonLevel + 1;
       setDungeonLevel(nextLevel);
       generateNewDungeon(nextLevel);
-      addCombatMessage(`Descended to level ${nextLevel}`);
+      setCombatLog(prev => [...prev.slice(-9), { message: `Descended to level ${nextLevel}`, turn }]);
     }
-  }, [dungeon, dungeonLevel, inventory, addCombatMessage, generateNewDungeon]);
+  }, [dungeon, dungeonLevel, inventory, turn, generateNewDungeon]);
 
   // Check for interactions when player moves
   useEffect(() => {
