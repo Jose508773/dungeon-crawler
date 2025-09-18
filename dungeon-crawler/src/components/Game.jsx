@@ -140,6 +140,42 @@ const Game = () => {
     }
   }, [inventory.weapon, inventory.armor]);
 
+  // Handle equipping items from inventory
+  const handleEquipItem = useCallback((item, index) => {
+    if (item.type === ITEM_TYPES.WEAPON) {
+      // Unequip current weapon if any
+      if (inventory.weapon) {
+        setPlayer(prev => removeItemStats({ ...prev }, inventory.weapon));
+        setCombatLog(prev => [...prev.slice(-9), { message: `Unequipped ${inventory.weapon.name}`, turn: turnRef.current }]);
+      }
+      
+      // Equip new weapon
+      setInventory(prev => ({ 
+        ...prev, 
+        weapon: item,
+        items: prev.items.filter((_, i) => i !== index)
+      }));
+      setPlayer(prev => applyItemStats({ ...prev }, item));
+      setCombatLog(prev => [...prev.slice(-9), { message: `Equipped ${item.name}!`, turn: turnRef.current }]);
+      
+    } else if (item.type === ITEM_TYPES.ARMOR) {
+      // Unequip current armor if any
+      if (inventory.armor) {
+        setPlayer(prev => removeItemStats({ ...prev }, inventory.armor));
+        setCombatLog(prev => [...prev.slice(-9), { message: `Unequipped ${inventory.armor.name}`, turn: turnRef.current }]);
+      }
+      
+      // Equip new armor
+      setInventory(prev => ({ 
+        ...prev, 
+        armor: item,
+        items: prev.items.filter((_, i) => i !== index)
+      }));
+      setPlayer(prev => applyItemStats({ ...prev }, item));
+      setCombatLog(prev => [...prev.slice(-9), { message: `Equipped ${item.name}!`, turn: turnRef.current }]);
+    }
+  }, [inventory.weapon, inventory.armor]);
+
   // Generate a new dungeon level with enemy limit
   const generateNewDungeon = useCallback((level = 1) => {
     try {
@@ -422,24 +458,12 @@ const Game = () => {
             }));
             message += `Found ${item.name}! `;
           } else if (item.type === ITEM_TYPES.WEAPON || item.type === ITEM_TYPES.ARMOR) {
-            // Check if player wants to equip the item
-            const currentItem = item.type === ITEM_TYPES.WEAPON ? inventory.weapon : inventory.armor;
-            
-            if (currentItem) {
-              // Remove stats from current item
-              setPlayer(prev => removeItemStats({ ...prev }, currentItem));
-            }
-            
-            // Equip new item
-            if (item.type === ITEM_TYPES.WEAPON) {
-              setInventory(prev => ({ ...prev, weapon: item }));
-            } else {
-              setInventory(prev => ({ ...prev, armor: item }));
-            }
-            
-            // Apply new item stats
-            setPlayer(prev => applyItemStats({ ...prev }, item));
-            message += `Equipped ${item.name}! `;
+            // Add weapons and armor to inventory instead of auto-equipping
+            setInventory(prev => ({
+              ...prev,
+              items: [...prev.items, item]
+            }));
+            message += `Found ${item.name}! Added to inventory. `;
           }
         }
       });
@@ -459,7 +483,7 @@ const Game = () => {
       generateNewDungeon(nextLevel);
       setCombatLog(prev => [...prev.slice(-9), { message: `Descended to level ${nextLevel}`, turn }]);
     }
-  }, [dungeon, dungeonLevel, inventory, turn, generateNewDungeon]);
+  }, [dungeon, dungeonLevel, turn, generateNewDungeon]);
 
   // Check for interactions when player moves - optimized
   useEffect(() => {
@@ -578,6 +602,7 @@ const Game = () => {
           player={player}
           onUseItem={handleUseItem}
           onUnequipItem={handleUnequipItem}
+          onEquipItem={handleEquipItem}
         />
       </MenuPanel>
 

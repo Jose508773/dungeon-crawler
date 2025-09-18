@@ -13,7 +13,7 @@ import leatherArmor from '../assets/sprites/items/leather_armor.png';
 import healthPotion from '../assets/sprites/items/health_potion.png';
 import inventorySlot from '../assets/sprites/ui/inventory_slot.png';
 
-const Inventory = ({ inventory, player, onUseItem, onUnequipItem }) => {
+const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem }) => {
   const slotStyle = {
     width: '48px',
     height: '48px',
@@ -69,6 +69,11 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem }) => {
   const handleItemClick = (item, index) => {
     if (item.type === 'consumable') {
       onUseItem(item, index);
+    } else if (item.type === 'weapon' || item.type === 'armor') {
+      // Equip weapons and armor
+      if (onEquipItem) {
+        onEquipItem(item, index);
+      }
     }
   };
 
@@ -201,7 +206,7 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem }) => {
         {/* Quick Actions */}
         <div className="pt-2 border-t border-gray-700">
           <p className="text-xs text-gray-500">
-            Click items to use • Click equipment to unequip
+            Click consumables to use • Click weapons/armor to equip • Click equipment to unequip
           </p>
         </div>
       </CardContent>
