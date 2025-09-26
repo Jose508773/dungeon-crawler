@@ -37,12 +37,21 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
     gridTemplateColumns: `repeat(${width}, ${tileSize}px)`,
     gridTemplateRows: `repeat(${height}, ${tileSize}px)`,
     gap: '0px',
-    border: '2px solid #8b4513',
-    borderRadius: '8px',
+    border: '3px solid #8b4513',
+    borderRadius: '12px',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#1a1a1a',
-    boxShadow: '0 0 20px rgba(255, 140, 66, 0.3)'
+    backgroundColor: '#0f0a1a',
+    boxShadow: `
+      0 0 30px rgba(255, 140, 66, 0.4),
+      0 0 60px rgba(139, 69, 19, 0.2),
+      inset 0 0 20px rgba(0, 0, 0, 0.8)
+    `,
+    background: `
+      radial-gradient(ellipse at 20% 20%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(75, 0, 130, 0.1) 0%, transparent 50%),
+      linear-gradient(145deg, #1a0d2e 0%, #0f0a1a 100%)
+    `
   };
 
   const tileStyle = {
@@ -60,8 +69,12 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
     height: `${tileSize}px`,
     imageRendering: 'pixelated',
     zIndex: 10,
-    transition: 'left 0.2s ease, top 0.2s ease',
-    filter: 'drop-shadow(0 0 8px rgba(255, 140, 66, 0.6))'
+    transition: 'left 0.3s ease, top 0.3s ease',
+    filter: `
+      drop-shadow(0 0 12px rgba(255, 140, 66, 0.8))
+      drop-shadow(0 0 24px rgba(255, 215, 0, 0.4))
+    `,
+    animation: 'playerGlow 2s ease-in-out infinite alternate'
   };
 
   // Generate torch positions based on dungeon layout

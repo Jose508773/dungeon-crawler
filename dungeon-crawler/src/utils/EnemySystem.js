@@ -6,12 +6,14 @@ import goblinArcher from '../assets/sprites/characters/goblin_archer.png';
 import stoneGolem from '../assets/sprites/characters/stone_golem.png';
 import shadowWraith from '../assets/sprites/characters/shadow_wraith.png';
 import dungeonBoss from '../assets/sprites/characters/dungeon_boss.png';
+import dragonSprite from '../assets/sprites/characters/dragon.png';
 
 export const ENEMY_TYPES = {
   SKELETON: 'skeleton',
   GOBLIN: 'goblin',
   GOLEM: 'golem',
   WRAITH: 'wraith',
+  DRAGON: 'dragon',
   BOSS: 'boss'
 };
 
@@ -70,6 +72,17 @@ export const ENEMY_STATS = {
     experience: 100,
     gold: 100,
     behavior: 'boss'
+  },
+  [ENEMY_TYPES.DRAGON]: {
+    name: 'Ancient Dragon',
+    sprite: dragonSprite,
+    health: 200,
+    attack: 35,
+    defense: 12,
+    speed: 1,
+    experience: 150,
+    gold: 200,
+    behavior: 'boss'
   }
 };
 
@@ -119,7 +132,7 @@ export class Enemy {
   }
 
   // Get valid moves for this enemy
-  getValidMoves(dungeon, enemies, player) {
+  getValidMoves(dungeon, enemies) {
     const moves = [];
     const directions = [
       { dx: 0, dy: -1 }, // up
@@ -163,7 +176,7 @@ export class Enemy {
       return null;
     }
 
-    const validMoves = this.getValidMoves(dungeon, enemies, player);
+    const validMoves = this.getValidMoves(dungeon, enemies);
     if (validMoves.length === 0) return null;
 
     const distanceToPlayer = this.distanceTo(player);
@@ -277,7 +290,6 @@ export const createEnemy = (type, x, y, id) => {
 
 // Generate random enemy types for spawning
 export const getRandomEnemyType = (level = 1) => {
-  const types = Object.values(ENEMY_TYPES);
   
   // Adjust enemy types based on level
   if (level === 1) {
@@ -293,11 +305,12 @@ export const getRandomEnemyType = (level = 1) => {
     const highTypes = [ENEMY_TYPES.SKELETON, ENEMY_TYPES.GOBLIN, ENEMY_TYPES.GOLEM, ENEMY_TYPES.WRAITH];
     return highTypes[Math.floor(Math.random() * highTypes.length)];
   } else {
-    // Boss levels: chance for boss
-    if (Math.random() < 0.3) {
-      return ENEMY_TYPES.BOSS;
-    }
-    return types[Math.floor(Math.random() * (types.length - 1))]; // Exclude boss from random
+    // Late levels: chance for dragon or boss
+    const roll = Math.random();
+    if (roll < 0.15) return ENEMY_TYPES.DRAGON;
+    if (roll < 0.3) return ENEMY_TYPES.BOSS;
+    const pool = [ENEMY_TYPES.SKELETON, ENEMY_TYPES.GOBLIN, ENEMY_TYPES.GOLEM, ENEMY_TYPES.WRAITH];
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 };
 

@@ -9,84 +9,80 @@ const PlayerStats = ({ player, turn }) => {
   const experiencePercentage = (player.experience / experienceToNext) * 100;
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-orange-400 flex items-center gap-2">
-          <Shield className="w-5 h-5" />
-          Character Stats
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="fantasy-card p-6">
+      <div className="mb-4">
+        <h2 className="fantasy-title text-xl flex items-center gap-2">
+          <Shield className="w-6 h-6" />
+          ⚔️ Character Stats
+        </h2>
+      </div>
+      <div className="space-y-6">
         {/* Health */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Heart className="w-4 h-4 text-red-500" />
-              <span className="text-sm font-medium">Health</span>
+              <Heart className="w-5 h-5 text-red-500" />
+              <span className="fantasy-text text-sm font-bold">❤️ Health</span>
             </div>
-            <span className="text-sm text-gray-400">
+            <span className="fantasy-text text-sm font-bold">
               {player.health}/{player.maxHealth}
             </span>
           </div>
-          <Progress 
-            value={healthPercentage} 
-            className="h-2"
-            style={{
-              '--progress-background': '#dc2626',
-              '--progress-foreground': '#ef4444'
-            }}
-          />
+          <div className="fantasy-progress h-4">
+            <div 
+              className="fantasy-progress-bar bg-gradient-to-r from-red-500 to-red-600"
+              style={{ width: `${healthPercentage}%` }}
+            />
+          </div>
         </div>
 
         {/* Level & Experience */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm font-medium">Level {player.level}</span>
+              <Star className="w-5 h-5 text-yellow-500" />
+              <span className="fantasy-text text-sm font-bold">⭐ Level {player.level}</span>
             </div>
-            <span className="text-sm text-gray-400">
+            <span className="fantasy-text text-sm font-bold">
               {player.experience}/{experienceToNext} XP
             </span>
           </div>
-          <Progress 
-            value={experiencePercentage} 
-            className="h-2"
-            style={{
-              '--progress-background': '#eab308',
-              '--progress-foreground': '#fbbf24'
-            }}
-          />
+          <div className="fantasy-progress h-4">
+            <div 
+              className="fantasy-progress-bar bg-gradient-to-r from-yellow-500 to-yellow-600"
+              style={{ width: `${experiencePercentage}%` }}
+            />
+          </div>
         </div>
 
         {/* Gold */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Coins className="w-4 h-4 text-yellow-600" />
-            <span className="text-sm font-medium">Gold</span>
+            <Coins className="w-5 h-5 text-yellow-600" />
+            <span className="fantasy-text text-sm font-bold">💰 Gold</span>
           </div>
-          <span className="text-sm text-yellow-400 font-bold">
+          <span className="fantasy-text text-lg font-bold text-yellow-400">
             {player.gold}
           </span>
         </div>
 
         {/* Turn Counter */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-          <span className="text-sm font-medium">Turn</span>
-          <span className="text-sm text-gray-400">
+        <div className="flex items-center justify-between pt-4 border-t-2 border-amber-600">
+          <span className="fantasy-text text-sm font-bold">🔄 Turn</span>
+          <span className="fantasy-text text-sm font-bold">
             {turn}
           </span>
         </div>
 
         {/* Position */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Position</span>
-          <span className="text-sm text-gray-400">
+          <span className="fantasy-text text-sm font-bold">📍 Position</span>
+          <span className="fantasy-text text-sm font-bold">
             ({player.x}, {player.y})
           </span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

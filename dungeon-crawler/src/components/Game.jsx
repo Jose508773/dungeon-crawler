@@ -6,6 +6,7 @@ import PlayerStats from './PlayerStats';
 import Inventory from './Inventory';
 import CombatLog from './CombatLog';
 import GameOverScreen from './GameOverScreen';
+import BattleInterface from './BattleInterface';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { generateDungeon } from '../utils/DungeonGenerator';
@@ -58,7 +59,7 @@ const Game = () => {
   const [inventory, setInventory] = useState(initialInventory);
   const [dungeon, setDungeon] = useState([]);
   const [enemies, setEnemies] = useState([]);
-  const [gameState, setGameState] = useState('playing'); // 'playing', 'paused', 'gameOver'
+  const [gameState, setGameState] = useState('playing'); // 'playing', 'battle', 'paused', 'gameOver'
   const [turn, setTurn] = useState(0);
   const [dungeonLevel, setDungeonLevel] = useState(1);
   const [combatLog, setCombatLog] = useState([]);
@@ -74,6 +75,22 @@ const Game = () => {
   const lastMoveTimeRef = useRef(0);
   const combatProcessingRef = useRef(false);
   const turnRef = useRef(0);
+
+  // Battle state
+  const [battle, setBattle] = useState({
+    active: false,
+    currentEnemyId: null,
+    queue: [],
+    lastMessage: null,
+    playerTurn: true
+  });
+  const [battleFx, setBattleFx] = useState({ enemyShake: false, playerShake: false, floats: [] });
+  const battleTimeoutsRef = useRef([]);
+
+  const clearBattleTimeouts = useCallback(() => {
+    battleTimeoutsRef.current.forEach(id => clearTimeout(id));
+    battleTimeoutsRef.current = [];
+  }, []);
   
   // Keep turnRef in sync with turn state
   useEffect(() => {
@@ -276,76 +293,33 @@ const Game = () => {
       else if (dy > 0) direction = 'front';
       else if (dy < 0) direction = 'back';
       
-      const newPlayer = {
-        ...prevPlayer,
-        x: newX,
-        y: newY,
-        direction
-      };
+      // Prevent walking onto an enemy's tile
+      const enemyOnTarget = enemies.find(e => e.isAlive && e.x === newX && e.y === newY);
 
-      // Handle combat when moving - optimized with batched updates
+      const newPlayer = enemyOnTarget
+        ? { ...prevPlayer, direction }
+        : { ...prevPlayer, x: newX, y: newY, direction };
+
+      // Trigger encounter if adjacent to enemies
       try {
-        const combatResults = CombatSystem.handleAutoCombat(newPlayer, enemies);
-        
-        if (combatResults && combatResults.length > 0) {
-          // Batch all state updates to prevent multiple re-renders
-          const rewards = CombatSystem.applyRewards(newPlayer, combatResults);
-          
-          // Single batched update for better performance
-          setEnemies(prevEnemies => prevEnemies.filter(enemy => enemy.isAlive));
-          
-          setPlayer(prev => {
-            const updatedPlayer = {
-              ...prev,
-              experience: newPlayer.experience,
-              gold: newPlayer.gold,
-              health: newPlayer.health,
-              level: newPlayer.level,
-              maxHealth: newPlayer.maxHealth,
-              attack: newPlayer.attack,
-              defense: newPlayer.defense
-            };
-            
-            // Check for game over
-            if (updatedPlayer.health <= 0) {
-              setGameState('gameOver');
-              setCombatLog(prev => [...prev.slice(-9), { message: 'Game Over! You have been defeated.', turn: turnRef.current + 1 }]);
-            }
-            
-            return updatedPlayer;
+        const adjacent = CombatSystem.getAdjacentEnemies(newPlayer, enemies);
+        if (adjacent && adjacent.length > 0) {
+          // Create battle queue (fight one-by-one)
+          const queueIds = adjacent.map(e => e.id);
+          setBattle({
+            active: true,
+            currentEnemyId: queueIds[0],
+            queue: queueIds.slice(1),
+            lastMessage: 'A wild enemy appears!',
+            playerTurn: true
           });
-          
-          // Batch combat messages to prevent excessive re-renders
-          const messages = [];
-          combatResults.forEach(result => {
-            if (result && result.message) messages.push(result.message);
-          });
-          
-          if (rewards && rewards.experience > 0) {
-            messages.push(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
-          }
-          
-          if (rewards && rewards.levelUp && rewards.levelUp.leveledUp) {
-            messages.push(rewards.levelUp.message);
-          }
-          
-          // Add all messages at once
-          if (messages.length > 0) {
-            setCombatLog(prev => {
-              const newMessages = messages.map((message, index) => ({ 
-                message, 
-                turn: turnRef.current + 1 + index
-              }));
-              return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
-            });
-          }
+          setGameState('battle');
+          setBattleFx({ enemyShake: false, playerShake: false, floats: [] });
         }
       } catch (error) {
-        console.error('Combat processing error:', error);
-        // Reset game state on critical error
-        setGameState('paused');
+        console.error('Encounter processing error:', error);
       } finally {
-        // Always re-enable movement, even if there's an error
+        // Always re-enable movement
         if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
         setIsMoving(false);
         combatProcessingRef.current = false;
@@ -357,6 +331,176 @@ const Game = () => {
     // Increment turn counter
     setTurn(prevTurn => prevTurn + 1);
   }, [gameState, dungeon, enemies, isMoving]);
+
+  // Battle helpers
+  const getCurrentEnemy = useCallback(() => {
+    if (!battle.active || !battle.currentEnemyId) return null;
+    return enemies.find(e => e.id === battle.currentEnemyId) || null;
+  }, [battle.active, battle.currentEnemyId, enemies]);
+
+  const endBattleIfNeeded = useCallback((updatedPlayer) => {
+    // If more enemies queued, start next
+    if (battle.queue.length > 0) {
+      const [nextId, ...rest] = battle.queue;
+      setBattle(prev => ({ ...prev, currentEnemyId: nextId, queue: rest, playerTurn: true }));
+      setBattleFx({ enemyShake: false, playerShake: false, floats: [] });
+      return;
+    }
+    // Otherwise return to exploration
+    setBattle({ active: false, currentEnemyId: null, queue: [], lastMessage: null, playerTurn: true });
+    setGameState('playing');
+    if (updatedPlayer) setPlayer(prev => ({ ...prev, ...updatedPlayer }));
+    setBattleFx({ enemyShake: false, playerShake: false, floats: [] });
+    clearBattleTimeouts();
+  }, [battle.queue, clearBattleTimeouts]);
+
+  const pushFloat = useCallback((side, amount, color) => {
+    const id = Date.now() + Math.random();
+    setBattleFx(prev => ({
+      ...prev,
+      floats: [...(prev.floats || []), { id, side, text: `-${amount}`, color }]
+    }));
+    const tid = setTimeout(() => {
+      setBattleFx(prev => ({
+        ...prev,
+        floats: (prev.floats || []).filter(f => f.id !== id)
+      }));
+    }, 800);
+    battleTimeoutsRef.current.push(tid);
+  }, []);
+
+  const handleBattleAttack = useCallback(() => {
+    if (!battle.active || !battle.playerTurn) return;
+    const enemy = getCurrentEnemy();
+    if (!enemy) return;
+
+    // Clone objects for safe updates
+    const enemyRef = enemy;
+    const playerClone = { ...player };
+    const result = CombatSystem.playerAttackEnemy(playerClone, enemyRef);
+
+    // Update enemy state
+    // Preserve class instance reference to keep methods like takeDamage working
+    setEnemies(prev => prev.map(e => e.id === enemyRef.id ? enemyRef : e));
+
+    // Log message
+    setCombatLog(prev => [...prev.slice(-9), { message: result.message, turn: turnRef.current + 1 }]);
+
+    // Visual shake on enemy
+    setBattleFx(prev => ({ ...prev, enemyShake: true }));
+    const t1 = setTimeout(() => setBattleFx(prev => ({ ...prev, enemyShake: false })), 180);
+    battleTimeoutsRef.current.push(t1);
+    pushFloat('enemy', result.damage, result.isCrit ? '#facc15' : '#ef4444');
+    if (result.isCrit) {
+      pushFloat('enemy', 'CRIT!', '#fde047');
+    }
+
+    // If enemy defeated, grant rewards and proceed
+    if (result.enemyDefeated) {
+      const rewards = CombatSystem.applyRewards(playerClone, [result]);
+      setPlayer(prev => ({
+        ...prev,
+        experience: playerClone.experience,
+        gold: playerClone.gold,
+        health: playerClone.health,
+        level: playerClone.level,
+        maxHealth: playerClone.maxHealth,
+        attack: playerClone.attack,
+        defense: playerClone.defense
+      }));
+      setEnemies(prev => prev.filter(e => e.isAlive));
+
+      const messages = [];
+      if (rewards.experience > 0) messages.push(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
+      if (rewards.levelUp && rewards.levelUp.leveledUp) messages.push(rewards.levelUp.message);
+      if (messages.length > 0) {
+        setCombatLog(prev => {
+          const newMessages = messages.map((m, i) => ({ message: m, turn: turnRef.current + 1 + i }));
+          return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
+        });
+      }
+
+      endBattleIfNeeded();
+      return;
+    }
+
+    // Switch to enemy turn, then resolve enemy attack slightly later for feedback
+    setBattle(prev => ({ ...prev, playerTurn: false }));
+
+    const counterTimeout = setTimeout(() => {
+      const enemyAttack = CombatSystem.enemyAttackPlayer(enemyRef, playerClone);
+      setPlayer(prev => ({ ...prev, health: playerClone.health }));
+      setCombatLog(prev => [...prev.slice(-9), { message: enemyAttack.message, turn: turnRef.current + 2 }]);
+
+      // Player shake on hit
+      setBattleFx(prev => ({ ...prev, playerShake: true }));
+      const t2 = setTimeout(() => setBattleFx(prev => ({ ...prev, playerShake: false })), 180);
+      battleTimeoutsRef.current.push(t2);
+      pushFloat('player', enemyAttack.damage, enemyAttack.isCrit ? '#facc15' : '#f97316');
+      if (enemyAttack.isCrit) {
+        pushFloat('player', 'CRIT!', '#fde047');
+      }
+
+      if (enemyAttack.playerDefeated) {
+        setGameState('gameOver');
+        setBattle(prev => ({ ...prev, active: false }));
+        setCombatLog(prev => [...prev.slice(-9), { message: 'Game Over! You have been defeated.', turn: turnRef.current + 3 }]);
+        clearBattleTimeouts();
+        return;
+      }
+
+      // Back to player's turn
+      setBattle(prev => ({ ...prev, playerTurn: true }));
+    }, 220);
+    battleTimeoutsRef.current.push(counterTimeout);
+  }, [battle.active, battle.playerTurn, getCurrentEnemy, player, endBattleIfNeeded, clearBattleTimeouts, pushFloat]);
+
+  const handleBattleRun = useCallback(() => {
+    if (!battle.active) return;
+    setBattle({ active: false, currentEnemyId: null, queue: [], lastMessage: 'You fled the battle.', playerTurn: true });
+    setGameState('playing');
+    setBattleFx({ enemyShake: false, playerShake: false, floats: [] });
+    clearBattleTimeouts();
+  }, [battle.active, clearBattleTimeouts]);
+
+  const handleBattleUseItem = useCallback(() => {
+    if (!battle.active || !battle.playerTurn) return;
+    // Use first consumable if present
+    const index = Array.isArray(inventory.items) ? inventory.items.findIndex(i => i.type === 'consumable') : -1;
+    if (index === -1) return;
+    const item = inventory.items[index];
+    if (item.health) {
+      setPlayer(prev => ({ ...prev, health: Math.min(prev.maxHealth, prev.health + item.health) }));
+      setCombatLog(prev => [...prev.slice(-9), { message: `Used ${item.name}! Restored ${item.health} HP.`, turn: turnRef.current + 1 }]);
+    }
+    setInventory(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
+
+    // Using an item consumes your turn → enemy counterattacks
+    const enemy = getCurrentEnemy();
+    if (!enemy) return;
+    setBattle(prev => ({ ...prev, playerTurn: false }));
+    const enemyRef = enemy;
+    const playerClone = { ...player };
+    const counterTimeout = setTimeout(() => {
+      const enemyAttack = CombatSystem.enemyAttackPlayer(enemyRef, playerClone);
+      setPlayer(prev => ({ ...prev, health: playerClone.health }));
+      setCombatLog(prev => [...prev.slice(-9), { message: enemyAttack.message, turn: turnRef.current + 2 }]);
+      setBattleFx(prev => ({ ...prev, playerShake: true }));
+      const t2 = setTimeout(() => setBattleFx(prev => ({ ...prev, playerShake: false })), 180);
+      battleTimeoutsRef.current.push(t2);
+      pushFloat('player', enemyAttack.damage, '#f97316');
+
+      if (enemyAttack.playerDefeated) {
+        setGameState('gameOver');
+        setBattle(prev => ({ ...prev, active: false }));
+        setCombatLog(prev => [...prev.slice(-9), { message: 'Game Over! You have been defeated.', turn: turnRef.current + 3 }]);
+        clearBattleTimeouts();
+        return;
+      }
+      setBattle(prev => ({ ...prev, playerTurn: true }));
+    }, 220);
+    battleTimeoutsRef.current.push(counterTimeout);
+  }, [battle.active, battle.playerTurn, inventory.items, getCurrentEnemy, player, clearBattleTimeouts, pushFloat]);
 
   // Handle enemy turns - DISABLED FOR STABILITY
   useEffect(() => {
@@ -525,8 +669,9 @@ const Game = () => {
       if (movementTimeout) clearTimeout(movementTimeout);
       if (enemyTimeout) clearTimeout(enemyTimeout);
       if (interactionTimeout) clearTimeout(interactionTimeout);
+      clearBattleTimeouts();
     };
-  }, []);
+  }, [clearBattleTimeouts]);
 
   // Reset game function
   const resetGame = useCallback(() => {
@@ -552,15 +697,15 @@ const Game = () => {
   }, [generateNewDungeon]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden">
+    <div className="min-h-screen magical-particles text-white overflow-hidden">
       {/* Full-screen game board */}
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="relative">
           {/* Dungeon Level Indicator */}
           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-30">
-            <div className="bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg border border-orange-500/30">
-              <span className="text-lg font-semibold text-orange-300">
-                Dungeon Level {dungeonLevel}
+            <div className="fantasy-card px-6 py-3 magical-glow">
+              <span className="fantasy-title text-xl">
+                🏰 Dungeon Level {dungeonLevel}
               </span>
             </div>
           </div>
@@ -635,6 +780,20 @@ const Game = () => {
           turn={turn}
           onRestart={resetGame}
           victory={dungeonLevel >= 10}
+        />
+      )}
+
+      {/* Battle Overlay */}
+      {gameState === 'battle' && (
+        <BattleInterface
+          player={player}
+          enemy={enemies.find(e => e.id === battle.currentEnemyId) || null}
+          inventory={inventory}
+          playerTurn={battle.playerTurn}
+          effects={battleFx}
+          onAttack={handleBattleAttack}
+          onUseItem={handleBattleUseItem}
+          onRun={handleBattleRun}
         />
       )}
     </div>

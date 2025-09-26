@@ -7,21 +7,26 @@ export class CombatSystem {
     const variance = Math.floor(baseDamage * 0.3);
     const randomDamage = baseDamage + Math.floor(Math.random() * variance) - Math.floor(variance / 2);
     
+    // Crit chance (10%) doubles damage
+    const isCrit = Math.random() < 0.1;
+    const critDamage = isCrit ? Math.floor(randomDamage * 1.8) : randomDamage;
+    
     // Apply defense
     const defense = defender.defense || 0;
-    const finalDamage = Math.max(1, randomDamage - defense);
+    const finalDamage = Math.max(1, critDamage - defense);
     
-    return finalDamage;
+    return { damage: finalDamage, isCrit };
   }
 
   static playerAttackEnemy(player, enemy) {
-    const damage = this.calculateDamage(player, enemy);
+    const { damage, isCrit } = this.calculateDamage(player, enemy);
     const actualDamage = enemy.takeDamage(damage);
     
     const result = {
       damage: actualDamage,
       enemyDefeated: !enemy.isAlive,
-      message: `You deal ${actualDamage} damage to ${enemy.name}!`
+      message: `You deal ${actualDamage} damage to ${enemy.name}!`,
+      isCrit
     };
 
     if (enemy.isAlive) {
@@ -36,7 +41,7 @@ export class CombatSystem {
   }
 
   static enemyAttackPlayer(enemy, player) {
-    const damage = this.calculateDamage(enemy, player);
+    const { damage, isCrit } = this.calculateDamage(enemy, player);
     const actualDamage = Math.min(damage, player.health);
     
     player.health -= actualDamage;
@@ -44,7 +49,8 @@ export class CombatSystem {
     const result = {
       damage: actualDamage,
       playerDefeated: player.health <= 0,
-      message: `${enemy.name} deals ${actualDamage} damage to you!`
+      message: `${enemy.name} deals ${actualDamage} damage to you!`,
+      isCrit
     };
 
     if (player.health > 0) {
@@ -64,9 +70,13 @@ export class CombatSystem {
   }
 
   static getAdjacentEnemies(player, enemies) {
-    return enemies.filter(enemy => 
-      enemy.isAlive && this.isAdjacent(player, enemy)
-    );
+    // Only consider cardinal-adjacent (up/down/left/right) for encounters
+    return enemies.filter(enemy => {
+      if (!enemy.isAlive) return false;
+      const dx = Math.abs(player.x - enemy.x);
+      const dy = Math.abs(player.y - enemy.y);
+      return (dx + dy === 1);
+    });
   }
 
   static getAdjacentPlayers(enemy, player) {
