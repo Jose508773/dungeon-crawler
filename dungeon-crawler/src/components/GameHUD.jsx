@@ -27,50 +27,59 @@ const GameHUD = ({
   return (
     <>
       {/* Top HUD Bar */}
-      <div className="fixed top-4 left-4 right-4 z-40 pointer-events-none">
-        <div className="flex justify-between items-start">
+      <div className="fixed top-2 left-2 right-2 z-40 pointer-events-none">
+        <div className="flex justify-between items-start gap-2">
           {/* Quick Stats (always visible) */}
           {showQuickStats && (
-            <div className="fantasy-panel pointer-events-auto p-4 rounded-lg" aria-label="Player quick stats">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="fantasy-title text-lg">⚔️ Adventurer</h3>
-                <span className="fantasy-text text-sm">Turn {turn}</span>
+            <div className="fantasy-panel-enhanced pointer-events-auto rounded-md pixel-corners magical-glow" 
+                 style={{ 
+                   minWidth: '220px', 
+                   maxWidth: '240px',
+                   padding: '0.5rem',
+                   fontSize: '10px'
+                 }}
+                 aria-label="Player quick stats">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="fantasy-title" style={{ fontSize: '10px' }}>⚔️ HERO</h3>
+                <span className="fantasy-text px-2 py-0.5 bg-gradient-to-r from-amber-900/40 to-amber-800/40 rounded border border-amber-700" style={{ fontSize: '9px' }}>
+                  T:{turn}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2" aria-label="Health">
-                  <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-800 rounded flex items-center justify-center border-2 border-red-400">
-                    <Heart className="w-4 h-4 text-white" aria-hidden="true" />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-1.5 p-1.5 bg-gradient-to-br from-gray-900/60 to-gray-800/60 rounded border border-amber-700/30" aria-label="Health">
+                  <div className="flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800 border border-red-400 rounded" style={{ width: '1.5rem', height: '1.5rem', minWidth: '1.5rem' }}>
+                    <Heart className="w-3 h-3 text-white" aria-hidden="true" />
                   </div>
-                  <div>
-                    <div className="fantasy-text text-xs">Health</div>
-                    <div className="fantasy-text text-sm font-bold">{player.health}/{player.maxHealth}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2" aria-label="Level">
-                  <div className="w-8 h-8 bg-gradient-to-br from-yellow-600 to-yellow-800 rounded flex items-center justify-center border-2 border-yellow-400">
-                    <Star className="w-4 h-4 text-white" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <div className="fantasy-text text-xs">Level</div>
-                    <div className="fantasy-text text-sm font-bold">{player.level}</div>
+                  <div className="flex flex-col leading-tight">
+                    <div className="fantasy-text opacity-70" style={{ fontSize: '8px' }}>HP</div>
+                    <div className="fantasy-text font-bold" style={{ fontSize: '9px' }}>{player.health}/{player.maxHealth}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2" aria-label="Gold">
-                  <div className="w-8 h-8 bg-gradient-to-br from-yellow-600 to-yellow-800 rounded flex items-center justify-center border-2 border-yellow-400">
-                    <Coins className="w-4 h-4 text-white" aria-hidden="true" />
+                <div className="flex items-center gap-1.5 p-1.5 bg-gradient-to-br from-gray-900/60 to-gray-800/60 rounded border border-amber-700/30" aria-label="Level">
+                  <div className="flex items-center justify-center bg-gradient-to-br from-yellow-600 to-yellow-800 border border-yellow-400 rounded" style={{ width: '1.5rem', height: '1.5rem', minWidth: '1.5rem' }}>
+                    <Star className="w-3 h-3 text-white" aria-hidden="true" />
                   </div>
-                  <div>
-                    <div className="fantasy-text text-xs">Gold</div>
-                    <div className="fantasy-text text-sm font-bold">{player.gold}</div>
+                  <div className="flex flex-col leading-tight">
+                    <div className="fantasy-text opacity-70" style={{ fontSize: '8px' }}>LV</div>
+                    <div className="fantasy-text font-bold" style={{ fontSize: '9px' }}>{player.level}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2" aria-label="Status">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-purple-800 rounded flex items-center justify-center border-2 border-purple-400">
-                    <ScrollText className="w-4 h-4 text-white" aria-hidden="true" />
+                <div className="flex items-center gap-1.5 p-1.5 bg-gradient-to-br from-gray-900/60 to-gray-800/60 rounded border border-amber-700/30" aria-label="Gold">
+                  <div className="flex items-center justify-center bg-gradient-to-br from-yellow-600 to-yellow-800 border border-yellow-400 rounded" style={{ width: '1.5rem', height: '1.5rem', minWidth: '1.5rem' }}>
+                    <Coins className="w-3 h-3 text-white" aria-hidden="true" />
                   </div>
-                  <div>
-                    <div className="fantasy-text text-xs">Status</div>
-                    <div className="fantasy-text text-sm font-bold">Active</div>
+                  <div className="flex flex-col leading-tight">
+                    <div className="fantasy-text opacity-70" style={{ fontSize: '8px' }}>Gold</div>
+                    <div className="fantasy-text font-bold" style={{ fontSize: '9px' }}>{player.gold}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 p-1.5 bg-gradient-to-br from-gray-900/60 to-gray-800/60 rounded border border-amber-700/30" aria-label="Status">
+                  <div className="flex items-center justify-center bg-gradient-to-br from-green-600 to-green-800 border border-green-400 rounded" style={{ width: '1.5rem', height: '1.5rem', minWidth: '1.5rem' }}>
+                    <ScrollText className="w-3 h-3 text-white" aria-hidden="true" />
+                  </div>
+                  <div className="flex flex-col leading-tight">
+                    <div className="fantasy-text opacity-70" style={{ fontSize: '8px' }}>OK</div>
+                    <div className="fantasy-text font-bold" style={{ fontSize: '9px' }}>✓</div>
                   </div>
                 </div>
               </div>
@@ -78,66 +87,65 @@ const GameHUD = ({
           )}
 
           {/* Game Controls */}
-          <div className="flex gap-2 pointer-events-auto">
-            <Button
+          <div className="flex gap-1.5 pointer-events-auto">
+            <button
               onClick={onTogglePause}
-              size="sm"
-              className="fantasy-button px-4 py-2 rounded-lg"
+              className="pixel-btn flex items-center justify-center p-2"
+              style={{ minWidth: '2.5rem', fontSize: '10px' }}
+              title={gameState === 'paused' ? 'Resume' : 'Pause'}
             >
-              {gameState === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-            </Button>
-            <Button
+              {gameState === 'paused' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+            </button>
+            <button
               onClick={onNewGame}
-              size="sm"
-              className="fantasy-button px-4 py-2 rounded-lg"
+              className="pixel-btn flex items-center gap-1 px-2 py-2"
+              style={{ fontSize: '10px' }}
             >
-              🎮 New Game
-            </Button>
+              🎮
+            </button>
           </div>
         </div>
       </div>
 
       {/* Bottom HUD Bar */}
-      <div className="fixed bottom-4 left-4 right-4 z-40 pointer-events-none">
-        <div className="flex justify-between items-end">
+      <div className="fixed bottom-2 left-2 right-2 z-40 pointer-events-none">
+        <div className="flex justify-between items-end gap-2">
           {/* Menu Toggle Buttons */}
-          <div className="flex gap-3 pointer-events-auto">
-            <Button
+          <div className="flex gap-2 pointer-events-auto">
+            <button
               onClick={() => onToggleMenu('inventory')}
-              size="default"
-              className="fantasy-button p-3 rounded-lg magical-glow"
+              className="pixel-btn p-2 magical-glow"
               title="Toggle Inventory (I)"
             >
               <img 
                 src={inventoryBag} 
                 alt="Inventory" 
-                className="w-6 h-6" 
-                style={{ imageRendering: 'pixelated' }}
+                className="w-5 h-5 pixel-perfect" 
               />
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={() => onToggleMenu('stats')}
-              size="default"
-              className="fantasy-button p-3 rounded-lg magical-glow"
+              className="pixel-btn p-2 magical-glow"
               title="Toggle Character Stats (C)"
             >
-              <Heart className="w-6 h-6" />
-            </Button>
-            <Button
+              <Heart className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => onToggleMenu('log')}
-              size="default"
-              className="fantasy-button p-3 rounded-lg magical-glow"
+              className="pixel-btn p-2 magical-glow"
               title="Toggle Combat Log (L)"
             >
-              <ScrollText className="w-6 h-6" />
-            </Button>
+              <ScrollText className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Controls Help */}
-          <div className="fantasy-card pointer-events-auto p-3">
-            <div className="fantasy-text text-xs space-y-1">
-              <div>🎮 WASD/Arrows: Move • Space: Wait</div>
-              <div>⚔️ I: Inventory • C: Stats • L: Combat Log</div>
+          <div className="fantasy-panel-enhanced pointer-events-auto rounded-md" style={{ padding: '0.4rem 0.75rem' }}>
+            <div className="fantasy-text leading-tight" style={{ fontSize: '9px' }}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-amber-400">🎮</span>
+                <span>WASD/Arrows • I/C/L</span>
+              </div>
             </div>
           </div>
         </div>
@@ -145,18 +153,20 @@ const GameHUD = ({
 
       {/* Pause Overlay */}
       {gameState === 'paused' && (
-        <div className="fixed inset-0 fantasy-modal-overlay z-50 flex items-center justify-center">
-          <div className="fantasy-card p-8 text-center max-w-md">
-            <div className="fantasy-title text-3xl mb-4">⏸️ Game Paused</div>
-            <p className="fantasy-text mb-6">Press Resume to continue your adventure</p>
-            <div className="flex gap-3 justify-center">
-              <Button onClick={onTogglePause} className="fantasy-button px-6 py-3">
-                <Play className="w-4 h-4 mr-2" />
-                ▶️ Resume
-              </Button>
-              <Button onClick={onNewGame} className="fantasy-button px-6 py-3">
-                🎮 New Game
-              </Button>
+        <div className="fixed inset-0 modal-overlay-enhanced z-50 flex items-center justify-center">
+          <div className="fantasy-panel-enhanced rounded-2xl p-12 text-center max-w-lg pixel-corners magical-glow">
+            <div className="game-title mb-8">⏸️ PAUSED</div>
+            <p className="fantasy-text text-base mb-8 leading-relaxed">
+              Your adventure awaits...
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button onClick={onTogglePause} className="pixel-btn px-8 py-4 flex items-center gap-3">
+                <Play className="w-5 h-5" />
+                RESUME
+              </button>
+              <button onClick={onNewGame} className="pixel-btn px-8 py-4 flex items-center gap-3">
+                🎮 NEW GAME
+              </button>
             </div>
           </div>
         </div>

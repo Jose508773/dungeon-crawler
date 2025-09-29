@@ -7,6 +7,7 @@ import Inventory from './Inventory';
 import CombatLog from './CombatLog';
 import GameOverScreen from './GameOverScreen';
 import BattleInterface from './BattleInterface';
+import LevelUpNotification from './LevelUpNotification';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { generateDungeon } from '../utils/DungeonGenerator';
@@ -86,6 +87,9 @@ const Game = () => {
   });
   const [battleFx, setBattleFx] = useState({ enemyShake: false, playerShake: false, floats: [] });
   const battleTimeoutsRef = useRef([]);
+  
+  // Level up state
+  const [levelUpData, setLevelUpData] = useState(null);
 
   const clearBattleTimeouts = useCallback(() => {
     battleTimeoutsRef.current.forEach(id => clearTimeout(id));
@@ -412,7 +416,11 @@ const Game = () => {
 
       const messages = [];
       if (rewards.experience > 0) messages.push(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
-      if (rewards.levelUp && rewards.levelUp.leveledUp) messages.push(rewards.levelUp.message);
+      if (rewards.levelUp && rewards.levelUp.leveledUp) {
+        messages.push(rewards.levelUp.message);
+        // Show level up notification
+        setLevelUpData(rewards.levelUp);
+      }
       if (messages.length > 0) {
         setCombatLog(prev => {
           const newMessages = messages.map((m, i) => ({ message: m, turn: turnRef.current + 1 + i }));
@@ -699,13 +707,13 @@ const Game = () => {
   return (
     <div className="min-h-screen magical-particles text-white overflow-hidden">
       {/* Full-screen game board */}
-      <div className="flex items-center justify-center min-h-screen p-4">
+      <div className="flex items-center justify-center min-h-screen py-20 px-4" style={{ paddingTop: '6rem' }}>
         <div className="relative">
           {/* Dungeon Level Indicator */}
-          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-30">
-            <div className="fantasy-card px-6 py-3 magical-glow">
-              <span className="fantasy-title text-xl">
-                🏰 Dungeon Level {dungeonLevel}
+          <div className="absolute left-1/2 transform -translate-x-1/2 z-30" style={{ top: '-2.5rem' }}>
+            <div className="fantasy-panel-enhanced rounded-md magical-glow" style={{ padding: '0.4rem 1rem' }}>
+              <span className="game-title" style={{ fontSize: '11px', letterSpacing: '0.1em' }}>
+                🏰 LV {dungeonLevel}
               </span>
             </div>
           </div>
@@ -741,6 +749,7 @@ const Game = () => {
         title="Inventory"
         icon={BagIcon}
         position="left"
+        width="w-[500px]"
       >
         <Inventory 
           inventory={inventory} 
@@ -757,6 +766,7 @@ const Game = () => {
         title="Character Stats"
         icon={Heart}
         position="right"
+        width="w-[450px]"
       >
         <PlayerStats player={player} turn={turn} />
       </MenuPanel>
@@ -767,7 +777,6 @@ const Game = () => {
         title="Combat Log"
         icon={ScrollText}
         position="bottom"
-        width="w-full"
       >
         <CombatLog messages={combatLog} />
       </MenuPanel>
@@ -794,6 +803,14 @@ const Game = () => {
           onAttack={handleBattleAttack}
           onUseItem={handleBattleUseItem}
           onRun={handleBattleRun}
+        />
+      )}
+
+      {/* Level Up Notification */}
+      {levelUpData && (
+        <LevelUpNotification
+          levelUpData={levelUpData}
+          onClose={() => setLevelUpData(null)}
         />
       )}
     </div>

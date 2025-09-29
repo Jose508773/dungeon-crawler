@@ -23,70 +23,96 @@ const BattleInterface = ({ player, enemy, onAttack, onRun, onUseItem, inventory,
   const hasConsumable = Array.isArray(inventory?.items) && inventory.items.some(i => i.type === 'consumable');
 
   return (
-    <div className="fixed inset-0 fantasy-modal-overlay z-50 flex items-center justify-center">
+    <div className="fixed inset-0 modal-overlay-enhanced z-50 flex items-center justify-center p-8">
       {/* Fantasy battle frame */}
-      <div className="fantasy-panel p-4 rounded-xl magical-glow max-w-5xl w-full mx-4">
-        <div className="fantasy-card p-6">
-          <div className="grid grid-cols-2 gap-8 relative">
+      <div className="fantasy-panel-enhanced rounded-2xl magical-glow max-w-6xl w-full pixel-corners">
+        <div className="relative">
+          <div className="grid grid-cols-2 gap-12 p-8 relative">
             {/* Floating damage numbers */}
             {(effects?.floats || []).map(f => (
-              <div key={f.id} className="absolute text-2xl font-bold text-shadow-lg animate-bounce"
+              <div key={f.id} className="absolute text-3xl font-bold animate-bounce"
                 style={{
                   left: f.side === 'enemy' ? '25%' : '75%',
-                  top: '30%',
+                  top: '35%',
                   transform: 'translate(-50%, -50%)',
                   color: f.color,
-                  textShadow: '0 2px 6px rgba(0,0,0,0.7)',
-                  animation: 'floatUp 0.8s ease forwards'
+                  textShadow: '2px 2px 0 rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.9)',
+                  animation: 'floatUp 0.8s ease forwards',
+                  fontFamily: '"Press Start 2P", monospace',
+                  letterSpacing: '0.1em'
                 }}>{f.text}</div>
             ))}
             
             {/* Enemy Panel */}
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center">
-                <h3 className="fantasy-title text-xl">👹 {enemy.name}</h3>
-                <span className="fantasy-text text-sm">Lv ?</span>
+            <div className="flex flex-col gap-6">
+              <div className="flex justify-between items-center px-2">
+                <h3 className="fantasy-title text-lg">👹 {enemy.name.toUpperCase()}</h3>
+                <span className="fantasy-text text-xs px-3 py-1 bg-red-900/40 rounded border border-red-700">
+                  Lv ?
+                </span>
               </div>
-              <Bar testId="enemy-hp-label" label="HP" current={enemy.health} max={enemy.maxHealth} color="#ef4444" />
-              <div className="h-48 flex items-center justify-center">
+              <div className="health-bar-container">
+                <div 
+                  className="health-bar-fill"
+                  style={{ width: `${Math.max(0, (enemy.health / enemy.maxHealth) * 100)}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="fantasy-text text-xs font-bold" style={{ textShadow: '1px 1px 0 rgba(0,0,0,0.9)' }}>
+                    {enemy.health}/{enemy.maxHealth}
+                  </span>
+                </div>
+              </div>
+              <div className="h-56 flex items-center justify-center bg-gradient-to-b from-red-950/20 to-transparent rounded-lg border-2 border-red-900/30">
                 <img
                   src={enemy.sprite || undefined}
                   alt={enemy.name}
-                  className="h-36 image-rendering-pixelated drop-shadow-lg"
+                  className="h-44 pixel-perfect drop-shadow-2xl"
                   style={{
-                    filter: 'drop-shadow(0 0 14px rgba(239,68,68,0.35))',
-                    transform: effects?.enemyShake ? 'translateX(4px)' : 'translateX(0)',
-                    transition: 'transform 90ms ease'
+                    filter: 'drop-shadow(0 0 20px rgba(239,68,68,0.5)) drop-shadow(0 0 40px rgba(239,68,68,0.3))',
+                    transform: effects?.enemyShake ? 'translateX(6px)' : 'translateX(0)',
+                    transition: 'transform 100ms ease'
                   }}
                 />
               </div>
             </div>
 
             {/* Player Panel */}
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center">
-                <span className="fantasy-text text-sm">Lv {player.level}</span>
-                <h3 className="fantasy-title text-xl">⚔️ Hero</h3>
+            <div className="flex flex-col gap-6">
+              <div className="flex justify-between items-center px-2">
+                <span className="fantasy-text text-xs px-3 py-1 bg-blue-900/40 rounded border border-blue-700">
+                  Lv {player.level}
+                </span>
+                <h3 className="fantasy-title text-lg">⚔️ HERO</h3>
               </div>
-              <Bar testId="player-hp-label" label="HP" current={player.health} max={player.maxHealth} color="#22c55e" />
-              <div className="h-48 flex items-center justify-center">
-                <div className="relative w-32 h-32">
+              <div className="health-bar-container">
+                <div 
+                  className="health-bar-fill"
+                  style={{ width: `${Math.max(0, (player.health / player.maxHealth) * 100)}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="fantasy-text text-xs font-bold" style={{ textShadow: '1px 1px 0 rgba(0,0,0,0.9)' }}>
+                    {player.health}/{player.maxHealth}
+                  </span>
+                </div>
+              </div>
+              <div className="h-56 flex items-center justify-center bg-gradient-to-b from-blue-950/20 to-transparent rounded-lg border-2 border-blue-900/30">
+                <div className="relative w-40 h-40">
                   <img
                     src={playerFront}
                     alt="player"
-                    className="absolute left-0 top-0 h-28 image-rendering-pixelated drop-shadow-lg"
+                    className="absolute left-0 top-0 h-32 pixel-perfect drop-shadow-2xl"
                     style={{
-                      filter: 'drop-shadow(0 0 14px rgba(59,130,246,0.25))',
-                      transform: effects?.playerShake ? 'translateX(-4px)' : 'translateX(0)',
-                      transition: 'transform 90ms ease'
+                      filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.4)) drop-shadow(0 0 40px rgba(59,130,246,0.2))',
+                      transform: effects?.playerShake ? 'translateX(-6px)' : 'translateX(0)',
+                      transition: 'transform 100ms ease'
                     }}
                   />
                   <img
                     src={ironSword}
                     alt="sword"
-                    className="absolute right-0 top-10 h-10 image-rendering-pixelated drop-shadow-sm -rotate-2"
+                    className="absolute right-0 top-12 h-12 pixel-perfect drop-shadow-lg -rotate-2"
                     style={{
-                      filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.2))'
+                      filter: 'drop-shadow(0 0 8px rgba(255,215,0,0.4))'
                     }}
                   />
                 </div>
@@ -95,38 +121,45 @@ const BattleInterface = ({ player, enemy, onAttack, onRun, onUseItem, inventory,
           </div>
 
           {/* Command Box */}
-          <div className="border-t-2 border-amber-600 bg-gradient-to-b from-amber-900/20 to-amber-800/30 p-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="flex items-center">
-                <div className="fantasy-text text-lg">
-                  {playerTurn ? '⚔️ Choose your action!' : '👹 Enemy is acting...'}
+          <div className="border-t-4 border-amber-700 bg-gradient-to-b from-amber-950/40 to-amber-900/50 p-8 rounded-b-2xl">
+            <div className="grid grid-cols-2 gap-8">
+              <div className="flex items-center justify-center">
+                <div className="fantasy-title text-base leading-relaxed text-center">
+                  {playerTurn ? (
+                    <span className="text-green-400">⚔️ YOUR TURN!</span>
+                  ) : (
+                    <span className="text-red-400">👹 ENEMY TURN...</span>
+                  )}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Button 
+              <div className="grid grid-cols-2 gap-4">
+                <button 
                   data-testid={`btn-attack-${playerTurn ? 'enabled' : 'disabled'}`} 
                   onClick={onAttack} 
                   disabled={!playerTurn} 
-                  className="fantasy-button px-4 py-3 text-lg font-bold"
+                  className="pixel-btn px-6 py-4 flex items-center justify-center gap-2"
                 >
-                  ⚔️ ATTACK
-                </Button>
-                <Button 
+                  <span>⚔️</span>
+                  <span>ATTACK</span>
+                </button>
+                <button 
                   data-testid={`btn-bag-${playerTurn ? 'enabled' : 'disabled'}`} 
                   onClick={onUseItem} 
                   disabled={!hasConsumable || !playerTurn} 
-                  className="fantasy-button px-4 py-3 text-lg font-bold"
+                  className="pixel-btn px-6 py-4 flex items-center justify-center gap-2"
                 >
-                  🎒 BAG
-                </Button>
-                <Button 
+                  <span>🎒</span>
+                  <span>BAG</span>
+                </button>
+                <button 
                   data-testid={`btn-run-${playerTurn ? 'enabled' : 'disabled'}`} 
                   onClick={onRun} 
                   disabled={!playerTurn} 
-                  className="fantasy-button px-4 py-3 text-lg font-bold"
+                  className="pixel-btn px-6 py-4 flex items-center justify-center gap-2"
                 >
-                  🏃 RUN
-                </Button>
+                  <span>🏃</span>
+                  <span>RUN</span>
+                </button>
                 <div />
               </div>
             </div>

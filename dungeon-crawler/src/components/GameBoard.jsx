@@ -37,19 +37,21 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
     gridTemplateColumns: `repeat(${width}, ${tileSize}px)`,
     gridTemplateRows: `repeat(${height}, ${tileSize}px)`,
     gap: '0px',
-    border: '3px solid #8b4513',
-    borderRadius: '12px',
+    border: '6px solid transparent',
+    borderImage: 'repeating-linear-gradient(90deg, #8b4513 0px, #8b4513 8px, #cd853f 8px, #cd853f 16px) 6',
+    borderRadius: '16px',
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#0f0a1a',
     boxShadow: `
-      0 0 30px rgba(255, 140, 66, 0.4),
-      0 0 60px rgba(139, 69, 19, 0.2),
-      inset 0 0 20px rgba(0, 0, 0, 0.8)
+      0 0 40px rgba(255, 140, 66, 0.5),
+      0 0 80px rgba(139, 69, 19, 0.3),
+      inset 0 0 30px rgba(0, 0, 0, 0.9),
+      0 12px 32px rgba(0, 0, 0, 0.8)
     `,
     background: `
-      radial-gradient(ellipse at 20% 20%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(75, 0, 130, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 20%, rgba(139, 69, 19, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(75, 0, 130, 0.15) 0%, transparent 50%),
       linear-gradient(145deg, #1a0d2e 0%, #0f0a1a 100%)
     `
   };
@@ -69,10 +71,11 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
     height: `${tileSize}px`,
     imageRendering: 'pixelated',
     zIndex: 10,
-    transition: 'left 0.3s ease, top 0.3s ease',
+    transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), top 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     filter: `
-      drop-shadow(0 0 12px rgba(255, 140, 66, 0.8))
-      drop-shadow(0 0 24px rgba(255, 215, 0, 0.4))
+      drop-shadow(0 0 16px rgba(255, 140, 66, 0.9))
+      drop-shadow(0 0 32px rgba(255, 215, 0, 0.5))
+      drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))
     `,
     animation: 'playerGlow 2s ease-in-out infinite alternate'
   };
@@ -109,8 +112,8 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
   const torchPositions = getTorchPositions();
 
   return (
-    <div className="flex justify-center">
-      <div style={boardStyle}>
+    <div className="flex justify-center pixel-corners">
+      <div style={boardStyle} className="pixel-perfect">
         {/* Render dungeon tiles */}
         {dungeon.map((row, y) =>
           row.map((tile, x) => {
@@ -122,6 +125,7 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
                 alt={tile}
                 style={tileStyle}
                 draggable={false}
+                className="pixel-perfect"
               />
             );
           })
@@ -141,15 +145,16 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
               height: `${tileSize}px`,
               imageRendering: 'pixelated',
               zIndex: 5,
-              filter: 'drop-shadow(0 0 12px rgba(255, 140, 66, 0.8))',
+              filter: 'drop-shadow(0 0 16px rgba(255, 140, 66, 0.9)) drop-shadow(0 0 32px rgba(255, 140, 66, 0.4))',
               animation: 'flicker 2s infinite alternate'
             }}
             draggable={false}
+            className="pixel-perfect"
           />
         ))}
         
         {/* Render enemies */}
-        {enemies.map((enemy, index) => (
+        {enemies.map((enemy) => (
           <div
             key={`enemy-${enemy.id}`}
             style={{
@@ -159,19 +164,20 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
               width: `${tileSize}px`,
               height: `${tileSize}px`,
               zIndex: 9,
-              transition: 'left 0.3s ease, top 0.3s ease'
+              transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), top 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
             <img
               src={enemy.sprite}
               alt={enemy.name}
+              className="pixel-perfect"
               style={{
                 width: '100%',
                 height: '100%',
                 imageRendering: 'pixelated',
                 filter: enemy.health < enemy.maxHealth * 0.3 
-                  ? 'drop-shadow(0 0 6px rgba(255, 0, 0, 0.8))' 
-                  : 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.3))'
+                  ? 'drop-shadow(0 0 12px rgba(255, 0, 0, 0.9)) drop-shadow(0 0 24px rgba(255, 0, 0, 0.5)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))' 
+                  : 'drop-shadow(0 0 8px rgba(255, 50, 50, 0.5)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6))'
               }}
               draggable={false}
             />
@@ -181,26 +187,28 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
               <div
                 style={{
                   position: 'absolute',
-                  top: '-8px',
+                  top: '-10px',
                   left: '4px',
                   width: `${tileSize - 8}px`,
-                  height: '4px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                  border: '1px solid #333',
-                  borderRadius: '2px'
+                  height: '6px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                  border: '2px solid #8b4513',
+                  borderRadius: '3px',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.6)'
                 }}
               >
                 <div
                   style={{
                     width: `${(enemy.health / enemy.maxHealth) * 100}%`,
                     height: '100%',
-                    backgroundColor: enemy.health > enemy.maxHealth * 0.5 
-                      ? '#4ade80' 
+                    background: enemy.health > enemy.maxHealth * 0.5 
+                      ? 'linear-gradient(90deg, #4ade80 0%, #22c55e 100%)' 
                       : enemy.health > enemy.maxHealth * 0.25 
-                        ? '#fbbf24' 
-                        : '#ef4444',
-                    borderRadius: '1px',
-                    transition: 'width 0.3s ease'
+                        ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' 
+                        : 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+                    borderRadius: '2px',
+                    transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)'
                   }}
                 />
               </div>
@@ -214,6 +222,7 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
           alt="player"
           style={playerStyle}
           draggable={false}
+          className="pixel-perfect"
         />
         
         {/* Add CSS for torch flicker animation */}

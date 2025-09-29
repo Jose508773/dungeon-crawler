@@ -145,15 +145,24 @@ export class CombatSystem {
       player.level++;
       player.experience -= experienceNeeded;
       
-      // Increase stats on level up
-      const healthIncrease = 20;
-      const attackIncrease = 2;
-      const defenseIncrease = 1;
+      // Increase stats on level up - scales with level
+      // Every 5 levels, get bonus stats
+      const isBonusLevel = player.level % 5 === 0;
+      const levelTier = Math.floor(player.level / 5);
+      
+      const healthIncrease = 20 + (levelTier * 5) + (isBonusLevel ? 15 : 0);
+      const attackIncrease = 2 + (isBonusLevel ? 1 : 0);
+      const defenseIncrease = 1 + (isBonusLevel ? 1 : 0);
       
       player.maxHealth += healthIncrease;
       player.health = player.maxHealth; // Full heal on level up
       player.attack = (player.attack || 10) + attackIncrease;
       player.defense = (player.defense || 0) + defenseIncrease;
+      
+      // Special message for bonus levels
+      const message = isBonusLevel
+        ? `🌟 MILESTONE LEVEL ${player.level}! 🌟 You feel significantly stronger!`
+        : `Level up! You are now level ${player.level}!`;
       
       return {
         leveledUp: true,
@@ -161,7 +170,8 @@ export class CombatSystem {
         healthIncrease,
         attackIncrease,
         defenseIncrease,
-        message: `Level up! You are now level ${player.level}!`
+        isBonusLevel,
+        message
       };
     }
     

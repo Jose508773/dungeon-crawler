@@ -13,44 +13,42 @@ const CombatLog = ({ messages }) => {
   }, [messages]);
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-orange-400 flex items-center gap-2">
-          <ScrollText className="w-5 h-5" />
-          Combat Log
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div 
-          ref={logRef}
-          className="h-48 overflow-y-auto space-y-1 text-sm"
-          style={{ scrollBehavior: 'smooth' }}
-        >
-          {messages.length === 0 ? (
-            <p className="text-gray-500 italic">No messages yet...</p>
-          ) : (
-            messages.map((msg, index) => (
-              <div 
-                key={index} 
-                className="p-2 bg-gray-700 rounded text-gray-200 border-l-2 border-orange-500"
-              >
-                <span className="text-xs text-gray-400 mr-2">
-                  Turn {msg.turn}:
+    <div className="h-full flex flex-col">
+      <div 
+        ref={logRef}
+        className="flex-1 overflow-y-auto space-y-2.5 pr-2"
+        style={{ scrollBehavior: 'smooth', maxHeight: 'calc(100vh - 200px)' }}
+      >
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-32">
+            <p className="fantasy-text text-sm opacity-50 italic">⚔️ No combat yet...</p>
+          </div>
+        ) : (
+          messages.map((msg, index) => (
+            <div 
+              key={index} 
+              className="stat-display p-3 rounded-lg border-l-4 border-amber-600 hover:bg-gradient-to-r hover:from-amber-950/30 hover:to-transparent transition-colors combat-entry"
+            >
+              <div className="flex items-start gap-3">
+                <span className="fantasy-text text-xs px-2 py-1 bg-amber-900/40 rounded border border-amber-700 flex-shrink-0">
+                  T:{msg.turn}
                 </span>
-                {msg.message}
+                <span className="fantasy-text text-sm leading-relaxed flex-1">
+                  {msg.message}
+                </span>
               </div>
-            ))
-          )}
-        </div>
-        
-        {/* Quick reference */}
-        <div className="mt-3 pt-3 border-t border-gray-700">
-          <p className="text-xs text-gray-500">
-            Move adjacent to enemies to attack automatically
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+            </div>
+          ))
+        )}
+      </div>
+      
+      {/* Quick reference */}
+      <div className="mt-4 pt-4 border-t-2 border-amber-700/50">
+        <p className="fantasy-text text-xs opacity-70 text-center leading-relaxed">
+          💡 Move adjacent to enemies to initiate combat • Use items in battle
+        </p>
+      </div>
+    </div>
   );
 };
 
