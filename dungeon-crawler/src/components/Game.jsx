@@ -14,6 +14,7 @@ import { generateDungeon } from '../utils/DungeonGenerator';
 import { createEnemy, getRandomEnemyType } from '../utils/EnemySystem';
 import { CombatSystem } from '../utils/CombatSystem';
 import { getChestLoot, applyItemStats, removeItemStats, ITEM_TYPES } from '../utils/ItemSystem';
+import { selectDungeonTheme, generateEnemyName, generateWeaponLoot, applyThemeMultipliers } from '../utils/ProceduralGenerator';
 import { Heart, ScrollText, Eye, EyeOff } from 'lucide-react';
 
 // Import bag icon
@@ -63,6 +64,7 @@ const Game = () => {
   const [gameState, setGameState] = useState('playing'); // 'playing', 'battle', 'paused', 'gameOver'
   const [turn, setTurn] = useState(0);
   const [dungeonLevel, setDungeonLevel] = useState(1);
+  const [dungeonTheme, setDungeonTheme] = useState(null);
   const [combatLog, setCombatLog] = useState([]);
   const [isMoving, setIsMoving] = useState(false);
   
@@ -200,6 +202,10 @@ const Game = () => {
   // Generate a new dungeon level with enemy limit
   const generateNewDungeon = useCallback((level = 1) => {
     try {
+      // Select theme for this level
+      const theme = selectDungeonTheme(level);
+      setDungeonTheme(theme);
+      
       const dungeonData = generateDungeon(BOARD_WIDTH, BOARD_HEIGHT);
       setDungeon(dungeonData.dungeon);
       
@@ -209,11 +215,34 @@ const Game = () => {
       
       const newEnemies = limitedSpawns.map((spawn, index) => {
         const enemyType = getRandomEnemyType(level);
-        return createEnemy(enemyType, spawn.x, spawn.y, `enemy_${index}`);
+        const enemy = createEnemy(enemyType, spawn.x, spawn.y, `enemy_${index}`);
+        
+        // Apply theme multipliers to enemy stats
+        const themedStats = applyThemeMultipliers({
+          health: enemy.maxHealth,
+          attack: enemy.attack,
+          defense: enemy.defense,
+          gold: enemy.gold,
+          experience: enemy.experience
+        }, theme);
+        
+        // Generate unique name for enemy
+        const generatedName = generateEnemyName(enemyType, theme);
+        
+        // Update enemy with theme adjustments
+        enemy.name = generatedName;
+        enemy.maxHealth = themedStats.health;
+        enemy.health = themedStats.health;
+        enemy.attack = themedStats.attack;
+        enemy.defense = themedStats.defense;
+        enemy.gold = themedStats.gold;
+        enemy.experience = themedStats.experience;
+        
+        return enemy;
       });
       
       setEnemies(newEnemies);
-      console.log(`Generated ${newEnemies.length} enemies for level ${level}`);
+      console.log(`Generated ${newEnemies.length} ${theme.name} enemies for level ${level}`);
       
       // Reset player position
       setPlayer(prev => ({
@@ -223,8 +252,11 @@ const Game = () => {
         direction: 'front'
       }));
       
-      // Add log message directly to avoid circular dependency
-      setCombatLog(prev => [...prev.slice(-9), { message: `Entered dungeon level ${level}`, turn: 0 }]);
+      // Add themed log message
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: `Entered ${theme.name} - Level ${level}`, 
+        turn: 0 
+      }]);
     } catch (error) {
       console.error('Dungeon generation error:', error);
       // Fallback: create minimal dungeon
@@ -594,6 +626,17 @@ const Game = () => {
       const loot = getChestLoot(dungeonLevel);
       let message = 'Opened chest! ';
       
+      // Add chance for procedural weapon (50% chance)
+      if (Math.random() < 0.5) {
+        const proceduralWeapons = generateWeaponLoot(dungeonLevel, 1, dungeonTheme);
+        const weapon = proceduralWeapons[0];
+        setInventory(prev => ({
+          ...prev,
+          items: [...prev.items, weapon]
+        }));
+        message += `Found ${weapon.name}! `;
+      }
+      
       // Process each piece of loot
       loot.forEach(lootItem => {
         if (lootItem.type === 'gold') {
@@ -635,7 +678,7 @@ const Game = () => {
       generateNewDungeon(nextLevel);
       setCombatLog(prev => [...prev.slice(-9), { message: `Descended to level ${nextLevel}`, turn }]);
     }
-  }, [dungeon, dungeonLevel, turn, generateNewDungeon]);
+  }, [dungeon, dungeonLevel, dungeonTheme, turn, generateNewDungeon]);
 
   // Check for interactions when player moves - optimized
   useEffect(() => {
@@ -709,12 +752,33 @@ const Game = () => {
       {/* Full-screen game board */}
       <div className="flex items-center justify-center min-h-screen py-20 px-4" style={{ paddingTop: '6rem' }}>
         <div className="relative">
-          {/* Dungeon Level Indicator */}
+          {/* Dungeon Level Indicator with Theme */}
           <div className="absolute left-1/2 transform -translate-x-1/2 z-30" style={{ top: '-2.5rem' }}>
-            <div className="fantasy-panel-enhanced rounded-md magical-glow" style={{ padding: '0.4rem 1rem' }}>
-              <span className="game-title" style={{ fontSize: '11px', letterSpacing: '0.1em' }}>
-                🏰 LV {dungeonLevel}
-              </span>
+            <div 
+              className="fantasy-panel-enhanced rounded-md magical-glow" 
+              style={{ 
+                padding: '0.4rem 1rem',
+                borderColor: dungeonTheme?.colors.accent || '#8b4513'
+              }}
+            >
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="game-title" style={{ fontSize: '11px', letterSpacing: '0.1em' }}>
+                  🏰 LV {dungeonLevel}
+                </span>
+                {dungeonTheme && (
+                  <span 
+                    className="fantasy-text" 
+                    style={{ 
+                      fontSize: '8px', 
+                      letterSpacing: '0.08em',
+                      color: dungeonTheme.colors.accent,
+                      textShadow: `0 0 8px ${dungeonTheme.colors.accent}40`
+                    }}
+                  >
+                    {dungeonTheme.name}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

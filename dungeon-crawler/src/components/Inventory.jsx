@@ -156,8 +156,12 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem })
               <div 
                 key={`${item.id}-${index}`} 
                 className="inventory-slot-enhanced"
-                title={`${item.name} - Click to ${item.type === 'consumable' ? 'use' : 'equip'}`}
+                title={`${item.name}${item.procedural ? ' [Procedural]' : ''}\n${item.description || ''}\n\nClick to ${item.type === 'consumable' ? 'use' : 'equip'}`}
                 onClick={() => handleItemClick(item, index)}
+                style={item.procedural && item.rarityColor ? {
+                  borderColor: item.rarityColor,
+                  boxShadow: `0 0 12px ${item.rarityColor}40`
+                } : {}}
               >
                 <div className="relative">
                   <img 
@@ -166,8 +170,24 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem })
                     className="w-14 h-14 pixel-perfect"
                   />
                   <div className={`absolute -top-2 -right-2 ${getRarityColor(item.rarity)}`}>
-                    <Zap className="w-4 h-4 drop-shadow-lg" />
+                    <Zap className="w-4 h-4 drop-shadow-lg" style={
+                      item.procedural && item.rarityColor ? {
+                        color: item.rarityColor,
+                        filter: `drop-shadow(0 0 4px ${item.rarityColor})`
+                      } : {}
+                    } />
                   </div>
+                  {/* Procedural item indicator */}
+                  {item.procedural && (
+                    <div 
+                      className="absolute -bottom-1 -left-1 w-3 h-3 rounded-sm"
+                      style={{
+                        backgroundColor: item.rarityColor,
+                        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                      }}
+                      title="Procedurally Generated"
+                    />
+                  )}
                 </div>
               </div>
             ))}
