@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Sword, Shield, Zap } from 'lucide-react';
+import { Package, Sword, Shield, Zap, Coins, X, TrendingUp } from 'lucide-react';
 
 // Import item sprites
 import ironSword from '../assets/sprites/items/iron_sword.png';
@@ -12,7 +12,8 @@ import crystalSpear from '../assets/sprites/items/crystal_spear.png';
 import leatherArmor from '../assets/sprites/items/leather_armor.png';
 import healthPotion from '../assets/sprites/items/health_potion.png';
 
-const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem }) => {
+const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, onSellItem }) => {
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const getItemSprite = (item) => {
     // Weapon sprites
@@ -45,13 +46,28 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem })
   };
 
   const handleItemClick = (item, index) => {
-    if (item.type === 'consumable') {
-      onUseItem(item, index);
-    } else if (item.type === 'weapon' || item.type === 'armor') {
-      // Equip weapons and armor
-      if (onEquipItem) {
-        onEquipItem(item, index);
-      }
+    // Open item details modal instead of auto-equipping/using
+    setSelectedItem({ item, index });
+  };
+
+  const handleUseItemAction = () => {
+    if (selectedItem && onUseItem) {
+      onUseItem(selectedItem.item, selectedItem.index);
+      setSelectedItem(null);
+    }
+  };
+
+  const handleEquipItemAction = () => {
+    if (selectedItem && onEquipItem) {
+      onEquipItem(selectedItem.item, selectedItem.index);
+      setSelectedItem(null);
+    }
+  };
+
+  const handleSellItemAction = () => {
+    if (selectedItem && onSellItem) {
+      onSellItem(selectedItem.item, selectedItem.index);
+      setSelectedItem(null);
     }
   };
 
@@ -59,6 +75,14 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem })
     if (onUnequipItem) {
       onUnequipItem(itemType);
     }
+  };
+
+  const getSellPrice = (item) => {
+    return Math.floor((item.value || 10) * 0.6);
+  };
+
+  const isItemEquipped = (item) => {
+    return inventory.weapon?.id === item.id || inventory.armor?.id === item.id;
   };
 
   return (
@@ -222,10 +246,151 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem })
         {/* Quick Actions */}
         <div className="pt-4 border-t-2 border-amber-700/30">
           <p className="fantasy-text text-xs leading-relaxed text-center opacity-80">
-            💡 Click items to use/equip • Click equipped items to unequip
+            💡 Click items to view details • Click equipped items to unequip
           </p>
         </div>
       </div>
+
+      {/* Item Details Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay-enhanced">
+          <div className="fantasy-panel-enhanced rounded-2xl p-8 max-w-lg mx-4 pixel-corners magical-glow">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="absolute top-4 right-4 pixel-btn p-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Item Display */}
+            <div className="flex items-start gap-6 mb-6">
+              <div className="relative flex-shrink-0">
+                <img 
+                  src={getItemSprite(selectedItem.item)} 
+                  alt={selectedItem.item.name}
+                  className="w-24 h-24 pixel-perfect"
+                  style={selectedItem.item.procedural && selectedItem.item.rarityColor ? {
+                    filter: `drop-shadow(0 0 12px ${selectedItem.item.rarityColor})`
+                  } : {}}
+                />
+                {isItemEquipped(selectedItem.item) && (
+                  <div className="absolute -top-2 -right-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+                    EQUIPPED
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1">
+                <h3 className={`fantasy-title text-2xl mb-2 ${getRarityColor(selectedItem.item.rarity)}`}>
+                  {selectedItem.item.name}
+                </h3>
+                {selectedItem.item.procedural && (
+                  <div className="mb-2">
+                    <span className="fantasy-text text-xs px-2 py-1 bg-purple-900/50 border border-purple-600 rounded">
+                      ✨ Procedural
+                    </span>
+                  </div>
+                )}
+                <p className="fantasy-text text-sm text-gray-300 mb-4">
+                  {selectedItem.item.description || 'A mysterious item from the dungeon.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Item Stats */}
+            <div className="space-y-3 mb-6">
+              {selectedItem.item.attack > 0 && (
+                <div className="stat-display p-3 bg-gradient-to-r from-red-900/40 to-transparent border-l-4 border-red-500">
+                  <div className="flex items-center justify-between">
+                    <span className="fantasy-text text-sm">⚔️ Attack Power</span>
+                    <span className="fantasy-text text-xl font-bold text-red-400">
+                      +{selectedItem.item.attack}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {selectedItem.item.defense > 0 && (
+                <div className="stat-display p-3 bg-gradient-to-r from-blue-900/40 to-transparent border-l-4 border-blue-500">
+                  <div className="flex items-center justify-between">
+                    <span className="fantasy-text text-sm">🛡️ Defense</span>
+                    <span className="fantasy-text text-xl font-bold text-blue-400">
+                      +{selectedItem.item.defense}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {selectedItem.item.health && (
+                <div className="stat-display p-3 bg-gradient-to-r from-green-900/40 to-transparent border-l-4 border-green-500">
+                  <div className="flex items-center justify-between">
+                    <span className="fantasy-text text-sm">❤️ Restores Health</span>
+                    <span className="fantasy-text text-xl font-bold text-green-400">
+                      +{selectedItem.item.health} HP
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="stat-display p-3 bg-gradient-to-r from-yellow-900/40 to-transparent border-l-4 border-yellow-500">
+                <div className="flex items-center justify-between">
+                  <span className="fantasy-text text-sm">💰 Value</span>
+                  <span className="fantasy-text text-lg font-bold text-yellow-400">
+                    {selectedItem.item.value || 10} gold
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              {/* Use/Equip Button */}
+              {selectedItem.item.type === 'consumable' && (
+                <button
+                  onClick={handleUseItemAction}
+                  className="pixel-btn w-full bg-gradient-to-b from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-5 h-5" />
+                  USE ITEM
+                </button>
+              )}
+              {(selectedItem.item.type === 'weapon' || selectedItem.item.type === 'armor') && !isItemEquipped(selectedItem.item) && (
+                <button
+                  onClick={handleEquipItemAction}
+                  className="pixel-btn w-full bg-gradient-to-b from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Sword className="w-5 h-5" />
+                  EQUIP
+                </button>
+              )}
+
+              {/* Sell Button */}
+              {!isItemEquipped(selectedItem.item) && onSellItem && (
+                <button
+                  onClick={handleSellItemAction}
+                  className="pixel-btn w-full bg-gradient-to-b from-yellow-600 to-yellow-800 hover:from-yellow-500 hover:to-yellow-700 flex items-center justify-center gap-2"
+                >
+                  <Coins className="w-5 h-5" />
+                  SELL FOR {getSellPrice(selectedItem.item)} GOLD
+                </button>
+              )}
+              {isItemEquipped(selectedItem.item) && (
+                <div className="p-3 bg-amber-900/30 border border-amber-700 rounded text-center">
+                  <p className="fantasy-text text-xs text-amber-400">
+                    ⚠️ Unequip this item before selling
+                  </p>
+                </div>
+              )}
+
+              {/* Cancel Button */}
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="pixel-btn w-full bg-gradient-to-b from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700"
+              >
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

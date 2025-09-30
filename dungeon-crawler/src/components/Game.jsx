@@ -5,7 +5,6 @@ import MenuPanel from './MenuPanel';
 import PlayerStats from './PlayerStats';
 import Inventory from './Inventory';
 import CombatLog from './CombatLog';
-import Shop from './Shop';
 import GameOverScreen from './GameOverScreen';
 import BattleInterface from './BattleInterface';
 import LevelUpNotification from './LevelUpNotification';
@@ -16,7 +15,7 @@ import { createEnemy, getRandomEnemyType } from '../utils/EnemySystem';
 import { CombatSystem } from '../utils/CombatSystem';
 import { getChestLoot, applyItemStats, removeItemStats, ITEM_TYPES } from '../utils/ItemSystem';
 import { selectDungeonTheme, generateEnemyName, generateWeaponLoot, applyThemeMultipliers } from '../utils/ProceduralGenerator';
-import { Heart, ScrollText, Coins, Eye, EyeOff } from 'lucide-react';
+import { Heart, ScrollText, Eye, EyeOff } from 'lucide-react';
 
 // Import bag icon
 import inventoryBag from '../assets/sprites/ui/inventory_bag.png';
@@ -108,8 +107,7 @@ const Game = () => {
   const [openMenus, setOpenMenus] = useState({
     inventory: false,
     stats: false,
-    log: false,
-    shop: false
+    log: false
   });
 
   // Toggle menu visibility
@@ -844,6 +842,7 @@ const Game = () => {
           onUseItem={handleUseItem}
           onUnequipItem={handleUnequipItem}
           onEquipItem={handleEquipItem}
+          onSellItem={handleSellItem}
         />
       </MenuPanel>
 
@@ -866,21 +865,6 @@ const Game = () => {
         position="bottom"
       >
         <CombatLog messages={combatLog} />
-      </MenuPanel>
-
-      <MenuPanel
-        isOpen={openMenus.shop}
-        onClose={() => toggleMenu('shop')}
-        title="Merchant Shop"
-        icon={Coins}
-        position="right"
-        width="w-[550px]"
-      >
-        <Shop 
-          inventory={inventory}
-          player={player}
-          onSellItem={handleSellItem}
-        />
       </MenuPanel>
 
       {/* Game Over Screen */}
