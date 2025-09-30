@@ -124,6 +124,13 @@ const GameHUD = ({
               />
             </button>
             <button
+              onClick={() => onToggleMenu('shop')}
+              className="pixel-btn p-2 magical-glow"
+              title="Toggle Shop (S)"
+            >
+              <Coins className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => onToggleMenu('stats')}
               className="pixel-btn p-2 magical-glow"
               title="Toggle Character Stats (C)"
@@ -144,7 +151,7 @@ const GameHUD = ({
             <div className="fantasy-text leading-tight" style={{ fontSize: '9px' }}>
               <div className="flex items-center gap-1.5">
                 <span className="text-amber-400">🎮</span>
-                <span>WASD/Arrows • I/C/L</span>
+                <span>WASD/Arrows • I/S/C/L</span>
               </div>
             </div>
           </div>
