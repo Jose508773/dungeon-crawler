@@ -1,4 +1,5 @@
 import React from 'react';
+import FogOfWar from './FogOfWar';
 
 // Import sprites
 import stoneWall from '../assets/sprites/environment/stone_wall.png';
@@ -31,7 +32,7 @@ const PLAYER_SPRITES = {
   right: playerRight
 };
 
-const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme }) => {
+const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme, exploredTiles }) => {
   // Get theme colors or use defaults
   const themeColors = theme?.colors || {
     floor: '#4a4a4a',
@@ -309,6 +310,17 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme })
             className="theme-fog"
           />
         )}
+        
+        {/* Fog of War Overlay */}
+        <FogOfWar
+          dungeon={dungeon}
+          player={player}
+          tileSize={tileSize}
+          width={width}
+          height={height}
+          exploredTiles={exploredTiles}
+          visionRadius={4}
+        />
         
         {/* Add CSS for torch flicker animation */}
         <style jsx>{`

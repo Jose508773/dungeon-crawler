@@ -67,6 +67,7 @@ const Game = () => {
   const [dungeonTheme, setDungeonTheme] = useState(null);
   const [combatLog, setCombatLog] = useState([]);
   const [isMoving, setIsMoving] = useState(false);
+  const [exploredTiles, setExploredTiles] = useState(new Set());
   
   // Simple UI visibility toggle (currently unused but kept for future features)
   const [_showUI, setShowUI] = useState(true);
@@ -219,6 +220,31 @@ const Game = () => {
     }]);
   }, []);
 
+  // Update explored tiles based on player vision radius
+  const updateExploredTiles = useCallback((playerX, playerY, visionRadius = 4) => {
+    setExploredTiles(prev => {
+      const newExplored = new Set(prev);
+      
+      // Reveal tiles within vision radius
+      for (let dy = -visionRadius; dy <= visionRadius; dy++) {
+        for (let dx = -visionRadius; dx <= visionRadius; dx++) {
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance <= visionRadius) {
+            const tileX = playerX + dx;
+            const tileY = playerY + dy;
+            
+            // Check if tile is within bounds
+            if (tileX >= 0 && tileX < BOARD_WIDTH && tileY >= 0 && tileY < BOARD_HEIGHT) {
+              newExplored.add(`${tileX},${tileY}`);
+            }
+          }
+        }
+      }
+      
+      return newExplored;
+    });
+  }, []);
+
   // Generate a new dungeon level with enemy limit
   const generateNewDungeon = useCallback((level = 1) => {
     try {
@@ -277,14 +303,23 @@ const Game = () => {
         message: `Entered ${theme.name} - Level ${level}`, 
         turn: 0 
       }]);
+      
+      // Reset and initialize fog of war
+      setExploredTiles(new Set());
+      setTimeout(() => {
+        updateExploredTiles(dungeonData.playerStart.x, dungeonData.playerStart.y);
+      }, 0);
+      
     } catch (error) {
       console.error('Dungeon generation error:', error);
       // Fallback: create minimal dungeon
       setDungeon(Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill('floor')));
       setEnemies([]);
       setPlayer(prev => ({ ...prev, x: 1, y: 1, direction: 'front' }));
+      setExploredTiles(new Set());
+      setTimeout(() => updateExploredTiles(1, 1), 0);
     }
-  }, []);
+  }, [updateExploredTiles]);
 
   // Initialize dungeon on component mount
   useEffect(() => {
@@ -356,6 +391,11 @@ const Game = () => {
         ? { ...prevPlayer, direction }
         : { ...prevPlayer, x: newX, y: newY, direction };
 
+      // Update fog of war when player moves to new position
+      if (!enemyOnTarget) {
+        setTimeout(() => updateExploredTiles(newX, newY), 0);
+      }
+
       // Trigger encounter if adjacent to enemies
       try {
         const adjacent = CombatSystem.getAdjacentEnemies(newPlayer, enemies);
@@ -386,7 +426,7 @@ const Game = () => {
     
     // Increment turn counter
     setTurn(prevTurn => prevTurn + 1);
-  }, [gameState, dungeon, enemies, isMoving]);
+  }, [gameState, dungeon, enemies, isMoving, updateExploredTiles]);
 
   // Battle helpers
   const getCurrentEnemy = useCallback(() => {
@@ -812,6 +852,7 @@ const Game = () => {
               width={BOARD_WIDTH}
               height={BOARD_HEIGHT}
               theme={dungeonTheme}
+              exploredTiles={exploredTiles}
             />
           </div>
         </div>
