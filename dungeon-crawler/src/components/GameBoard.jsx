@@ -31,31 +31,77 @@ const PLAYER_SPRITES = {
   right: playerRight
 };
 
-const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
+const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme }) => {
+  // Get theme colors or use defaults
+  const themeColors = theme?.colors || {
+    floor: '#4a4a4a',
+    wall: '#2a2a2a',
+    accent: '#8b4513',
+    fog: 'rgba(20, 20, 30, 0.3)'
+  };
+  
+  const effectColor = theme?.effectColor || themeColors.accent;
+  
   const boardStyle = {
     display: 'grid',
     gridTemplateColumns: `repeat(${width}, ${tileSize}px)`,
     gridTemplateRows: `repeat(${height}, ${tileSize}px)`,
     gap: '0px',
     border: '6px solid transparent',
-    borderImage: 'repeating-linear-gradient(90deg, #8b4513 0px, #8b4513 8px, #cd853f 8px, #cd853f 16px) 6',
+    borderImage: `repeating-linear-gradient(90deg, ${themeColors.accent} 0px, ${themeColors.accent} 8px, ${themeColors.wall} 8px, ${themeColors.wall} 16px) 6`,
     borderRadius: '16px',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#0f0a1a',
+    backgroundColor: themeColors.wall,
     boxShadow: `
-      0 0 40px rgba(255, 140, 66, 0.5),
-      0 0 80px rgba(139, 69, 19, 0.3),
+      0 0 40px ${effectColor}80,
+      0 0 80px ${effectColor}40,
       inset 0 0 30px rgba(0, 0, 0, 0.9),
       0 12px 32px rgba(0, 0, 0, 0.8)
     `,
     background: `
-      radial-gradient(ellipse at 20% 20%, rgba(139, 69, 19, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(75, 0, 130, 0.15) 0%, transparent 50%),
-      linear-gradient(145deg, #1a0d2e 0%, #0f0a1a 100%)
+      radial-gradient(ellipse at 20% 20%, ${effectColor}26 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, ${effectColor}26 0%, transparent 50%),
+      linear-gradient(145deg, ${themeColors.wall} 0%, ${themeColors.floor} 100%)
     `
   };
 
+  // Get theme-specific tile filter
+  const getTileFilter = (tileType) => {
+    if (!theme) return 'none';
+    
+    const themeFilters = {
+      ice_cave: {
+        wall: 'brightness(1.1) saturate(1.3) hue-rotate(180deg)',
+        floor: 'brightness(1.2) saturate(1.2) hue-rotate(180deg)',
+        default: 'brightness(1.15) saturate(1.2) hue-rotate(180deg)'
+      },
+      lava_pit: {
+        wall: 'brightness(0.8) saturate(1.5) hue-rotate(-30deg) contrast(1.2)',
+        floor: 'brightness(0.9) saturate(1.6) hue-rotate(-30deg) contrast(1.1)',
+        default: 'brightness(0.85) saturate(1.5) hue-rotate(-30deg)'
+      },
+      shadow_crypt: {
+        wall: 'brightness(0.6) saturate(0.8) hue-rotate(240deg) contrast(1.3)',
+        floor: 'brightness(0.7) saturate(0.9) hue-rotate(240deg)',
+        default: 'brightness(0.65) saturate(0.85) hue-rotate(240deg)'
+      },
+      cursed_forest: {
+        wall: 'brightness(0.8) saturate(1.4) hue-rotate(90deg) contrast(1.1)',
+        floor: 'brightness(0.9) saturate(1.3) hue-rotate(90deg)',
+        default: 'brightness(0.85) saturate(1.35) hue-rotate(90deg)'
+      },
+      stone_dungeon: {
+        wall: 'none',
+        floor: 'none',
+        default: 'none'
+      }
+    };
+    
+    const filters = themeFilters[theme.id] || themeFilters.stone_dungeon;
+    return filters[tileType] || filters.default;
+  };
+  
   const tileStyle = {
     width: `${tileSize}px`,
     height: `${tileSize}px`,
@@ -118,12 +164,16 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
         {dungeon.map((row, y) =>
           row.map((tile, x) => {
             const sprite = TILE_SPRITES[tile] || TILE_SPRITES.floor;
+            const filter = getTileFilter(tile);
             return (
               <img
                 key={`${x}-${y}`}
                 src={sprite}
                 alt={tile}
-                style={tileStyle}
+                style={{
+                  ...tileStyle,
+                  filter: filter
+                }}
                 draggable={false}
                 className="pixel-perfect"
               />
@@ -132,26 +182,45 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
         )}
         
         {/* Render atmospheric torches */}
-        {torchPositions.map((torch, index) => (
-          <img
-            key={`torch-${index}`}
-            src={torchLit}
-            alt="torch"
-            style={{
-              position: 'absolute',
-              left: `${torch.x * tileSize}px`,
-              top: `${torch.y * tileSize}px`,
-              width: `${tileSize}px`,
-              height: `${tileSize}px`,
-              imageRendering: 'pixelated',
-              zIndex: 5,
-              filter: 'drop-shadow(0 0 16px rgba(255, 140, 66, 0.9)) drop-shadow(0 0 32px rgba(255, 140, 66, 0.4))',
-              animation: 'flicker 2s infinite alternate'
-            }}
-            draggable={false}
-            className="pixel-perfect"
-          />
-        ))}
+        {torchPositions.map((torch, index) => {
+          // Theme-specific torch glow colors
+          const getTorchGlow = () => {
+            if (!theme) return 'rgba(255, 140, 66, 0.9)';
+            
+            const torchGlows = {
+              ice_cave: 'rgba(136, 192, 208, 0.9)',      // Cyan glow
+              lava_pit: 'rgba(255, 69, 0, 1.0)',         // Orange-red glow
+              shadow_crypt: 'rgba(138, 43, 226, 0.9)',   // Purple glow
+              cursed_forest: 'rgba(118, 255, 3, 0.8)',   // Green glow
+              stone_dungeon: 'rgba(255, 140, 66, 0.9)'   // Default orange
+            };
+            
+            return torchGlows[theme.id] || torchGlows.stone_dungeon;
+          };
+          
+          const torchGlow = getTorchGlow();
+          
+          return (
+            <img
+              key={`torch-${index}`}
+              src={torchLit}
+              alt="torch"
+              style={{
+                position: 'absolute',
+                left: `${torch.x * tileSize}px`,
+                top: `${torch.y * tileSize}px`,
+                width: `${tileSize}px`,
+                height: `${tileSize}px`,
+                imageRendering: 'pixelated',
+                zIndex: 5,
+                filter: `${getTileFilter('default')} drop-shadow(0 0 16px ${torchGlow}) drop-shadow(0 0 32px ${torchGlow.replace('0.9', '0.4')})`,
+                animation: 'flicker 2s infinite alternate'
+              }}
+              draggable={false}
+              className="pixel-perfect"
+            />
+          );
+        })}
         
         {/* Render enemies */}
         {enemies.map((enemy) => (
@@ -225,6 +294,22 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
           className="pixel-perfect"
         />
         
+        {/* Theme Fog Overlay */}
+        {theme && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: themeColors.fog,
+              pointerEvents: 'none',
+              zIndex: 20,
+              mixBlendMode: 'multiply',
+              opacity: 0.6
+            }}
+            className="theme-fog"
+          />
+        )}
+        
         {/* Add CSS for torch flicker animation */}
         <style jsx>{`
           @keyframes flicker {
@@ -233,6 +318,15 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height }) => {
             50% { filter: drop-shadow(0 0 10px rgba(255, 140, 66, 0.7)) brightness(0.9); }
             75% { filter: drop-shadow(0 0 14px rgba(255, 140, 66, 0.85)) brightness(1.05); }
             100% { filter: drop-shadow(0 0 12px rgba(255, 140, 66, 0.8)) brightness(1); }
+          }
+          
+          .theme-fog {
+            animation: fogPulse 8s ease-in-out infinite alternate;
+          }
+          
+          @keyframes fogPulse {
+            0% { opacity: 0.5; }
+            100% { opacity: 0.7; }
           }
         `}</style>
       </div>

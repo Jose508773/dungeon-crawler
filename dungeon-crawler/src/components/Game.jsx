@@ -791,6 +791,7 @@ const Game = () => {
               tileSize={TILE_SIZE}
               width={BOARD_WIDTH}
               height={BOARD_HEIGHT}
+              theme={dungeonTheme}
             />
           </div>
         </div>
