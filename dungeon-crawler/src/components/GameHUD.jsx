@@ -9,7 +9,8 @@ import {
   Settings,
   X,
   Pause,
-  Play
+  Play,
+  Sparkles
 } from 'lucide-react';
 
 // Import bag icon
@@ -122,6 +123,18 @@ const GameHUD = ({
                 alt="Inventory" 
                 className="w-5 h-5 pixel-perfect" 
               />
+            </button>
+            <button
+              onClick={() => onToggleMenu('skills')}
+              className="pixel-btn p-2 magical-glow relative"
+              title="Toggle Skills (K)"
+            >
+              <Sparkles className="w-5 h-5" />
+              {player.skillPoints > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] font-bold border border-white">
+                  {player.skillPoints}
+                </span>
+              )}
             </button>
             <button
               onClick={() => onToggleMenu('stats')}

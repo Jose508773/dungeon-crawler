@@ -91,8 +91,6 @@ export const DUNGEON_THEMES = {
 
 // Select theme based on dungeon level
 export function selectDungeonTheme(level) {
-  const themes = Object.values(DUNGEON_THEMES);
-  
   if (level <= 2) {
     return DUNGEON_THEMES.STONE_DUNGEON;
   } else if (level <= 4) {
@@ -158,14 +156,19 @@ const ENEMY_NAME_COMPONENTS = {
 export function generateEnemyName(enemyType, theme = null) {
   const components = ENEMY_NAME_COMPONENTS[enemyType] || ENEMY_NAME_COMPONENTS.skeleton;
   
-  // Get random components
-  const title = components.titles[Math.floor(Math.random() * components.titles.length)];
-  const name = components.names[Math.floor(Math.random() * components.names.length)];
-  const suffix = components.suffixes[Math.floor(Math.random() * components.suffixes.length)];
+  // Defensive checks for components
+  if (!components || !components.titles || !components.names || !components.suffixes) {
+    return enemyType ? `${enemyType} Enemy` : 'Enemy';
+  }
+  
+  // Get random components with safe array access
+  const title = components.titles[Math.floor(Math.random() * components.titles.length)] || '';
+  const name = components.names[Math.floor(Math.random() * components.names.length)] || 'Unknown';
+  const suffix = components.suffixes[Math.floor(Math.random() * components.suffixes.length)] || '';
   
   // Add theme prefix if available
   let prefix = '';
-  if (theme && theme.enemyPrefixes && Math.random() < 0.4) {
+  if (theme && theme.enemyPrefixes && Array.isArray(theme.enemyPrefixes) && theme.enemyPrefixes.length > 0 && Math.random() < 0.4) {
     prefix = theme.enemyPrefixes[Math.floor(Math.random() * theme.enemyPrefixes.length)] + ' ';
   }
   
@@ -175,7 +178,7 @@ export function generateEnemyName(enemyType, theme = null) {
   fullName += name;
   if (suffix) fullName += ' ' + suffix;
   
-  return fullName.trim();
+  return fullName.trim() || 'Enemy';
 }
 
 // ============================================
@@ -250,14 +253,19 @@ function getRarityStatMultiplier(rarity) {
 
 // Generate a random weapon
 export function generateRandomWeapon(dungeonLevel, theme = null) {
+  // Defensive check on dungeon level
+  const safeLevel = Math.max(1, Math.min(20, dungeonLevel || 1));
+  
   // Determine rarity
-  const rarity = determineRarity(dungeonLevel);
+  const rarity = determineRarity(safeLevel);
   const multiplier = getRarityStatMultiplier(rarity);
   
-  // Generate name
-  const prefix = WEAPON_PREFIXES[rarity][Math.floor(Math.random() * WEAPON_PREFIXES[rarity].length)];
+  // Generate name with safe array access
+  const prefixes = WEAPON_PREFIXES[rarity] || WEAPON_PREFIXES[ITEM_RARITY.COMMON];
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   const weaponType = WEAPON_TYPES[Math.floor(Math.random() * WEAPON_TYPES.length)];
-  const suffix = WEAPON_SUFFIXES[rarity][Math.floor(Math.random() * WEAPON_SUFFIXES[rarity].length)];
+  const suffixes = WEAPON_SUFFIXES[rarity] || WEAPON_SUFFIXES[ITEM_RARITY.COMMON];
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
   
   // Add theme flavor
   let themeFlavor = '';
@@ -338,13 +346,33 @@ export function getThemeEnemies(theme) {
 
 // Apply theme multipliers to enemy stats
 export function applyThemeMultipliers(enemyStats, theme) {
+  // Defensive checks
+  if (!enemyStats || typeof enemyStats !== 'object') {
+    console.warn('Invalid enemy stats provided to applyThemeMultipliers');
+    return {
+      health: 10,
+      attack: 5,
+      defense: 1,
+      gold: 5,
+      experience: 10
+    };
+  }
+  
+  if (!theme || typeof theme !== 'object') {
+    console.warn('Invalid theme provided to applyThemeMultipliers');
+    return enemyStats;
+  }
+  
+  const difficultyMult = theme.difficultyMultiplier || 1.0;
+  const lootMult = theme.lootMultiplier || 1.0;
+  
   return {
     ...enemyStats,
-    health: Math.floor(enemyStats.health * theme.difficultyMultiplier),
-    attack: Math.floor(enemyStats.attack * theme.difficultyMultiplier),
-    defense: Math.floor(enemyStats.defense * theme.difficultyMultiplier),
-    gold: Math.floor(enemyStats.gold * theme.lootMultiplier),
-    experience: Math.floor(enemyStats.experience * theme.lootMultiplier)
+    health: Math.floor((enemyStats.health || 10) * difficultyMult),
+    attack: Math.floor((enemyStats.attack || 5) * difficultyMult),
+    defense: Math.floor((enemyStats.defense || 1) * difficultyMult),
+    gold: Math.floor((enemyStats.gold || 5) * lootMult),
+    experience: Math.floor((enemyStats.experience || 10) * lootMult)
   };
 }
 

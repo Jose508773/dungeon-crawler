@@ -33,6 +33,15 @@ const PLAYER_SPRITES = {
 };
 
 const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme, exploredTiles }) => {
+  // Defensive checks to prevent crashes
+  if (!dungeon || !Array.isArray(dungeon) || dungeon.length === 0) {
+    return <div className="text-white p-4">Loading dungeon...</div>;
+  }
+  
+  if (!player || typeof player.x !== 'number' || typeof player.y !== 'number') {
+    return <div className="text-white p-4">Loading player...</div>;
+  }
+  
   // Get theme colors or use defaults
   const themeColors = theme?.colors || {
     floor: '#4a4a4a',
@@ -224,7 +233,7 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme, e
         })}
         
         {/* Render enemies */}
-        {enemies.map((enemy) => (
+        {Array.isArray(enemies) && enemies.filter(e => e && typeof e.x === 'number' && typeof e.y === 'number' && e.sprite).map((enemy) => (
           <div
             key={`enemy-${enemy.id}`}
             style={{
@@ -239,13 +248,13 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme, e
           >
             <img
               src={enemy.sprite}
-              alt={enemy.name}
+              alt={enemy.name || 'enemy'}
               className="pixel-perfect"
               style={{
                 width: '100%',
                 height: '100%',
                 imageRendering: 'pixelated',
-                filter: enemy.health < enemy.maxHealth * 0.3 
+                filter: (enemy.health || 0) < (enemy.maxHealth || 1) * 0.3 
                   ? 'drop-shadow(0 0 12px rgba(255, 0, 0, 0.9)) drop-shadow(0 0 24px rgba(255, 0, 0, 0.5)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))' 
                   : 'drop-shadow(0 0 8px rgba(255, 50, 50, 0.5)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6))'
               }}
@@ -253,7 +262,7 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme, e
             />
             
             {/* Enemy health bar */}
-            {enemy.health < enemy.maxHealth && (
+            {(enemy.health || 0) < (enemy.maxHealth || 1) && (
               <div
                 style={{
                   position: 'absolute',
@@ -269,11 +278,11 @@ const GameBoard = ({ dungeon, player, enemies, tileSize, width, height, theme, e
               >
                 <div
                   style={{
-                    width: `${(enemy.health / enemy.maxHealth) * 100}%`,
+                    width: `${Math.max(0, Math.min(100, ((enemy.health || 0) / (enemy.maxHealth || 1)) * 100))}%`,
                     height: '100%',
-                    background: enemy.health > enemy.maxHealth * 0.5 
+                    background: (enemy.health || 0) > (enemy.maxHealth || 1) * 0.5 
                       ? 'linear-gradient(90deg, #4ade80 0%, #22c55e 100%)' 
-                      : enemy.health > enemy.maxHealth * 0.25 
+                      : (enemy.health || 0) > (enemy.maxHealth || 1) * 0.25 
                         ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' 
                         : 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
                     borderRadius: '2px',

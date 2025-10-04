@@ -18,9 +18,19 @@ const Bar = ({ label, current, max, color = '#22c55e', testId }) => {
 };
 
 const BattleInterface = ({ player, enemy, onAttack, onRun, onUseItem, inventory, playerTurn, effects }) => {
-  if (!enemy) return null;
+  // Defensive checks to prevent crashes
+  if (!enemy || !player) {
+    console.warn('BattleInterface: Missing enemy or player data');
+    return null;
+  }
+  
+  // Validate required enemy properties
+  if (!enemy.name || typeof enemy.health !== 'number' || typeof enemy.maxHealth !== 'number') {
+    console.error('BattleInterface: Invalid enemy state', enemy);
+    return null;
+  }
 
-  const hasConsumable = Array.isArray(inventory?.items) && inventory.items.some(i => i.type === 'consumable');
+  const hasConsumable = Array.isArray(inventory?.items) && inventory.items.some(i => i && i.type === 'consumable');
 
   return (
     <div className="fixed inset-0 modal-overlay-enhanced z-50 flex items-center justify-center p-8">
@@ -63,16 +73,24 @@ const BattleInterface = ({ player, enemy, onAttack, onRun, onUseItem, inventory,
                 </div>
               </div>
               <div className="h-56 flex items-center justify-center bg-gradient-to-b from-red-950/20 to-transparent rounded-lg border-2 border-red-900/30">
-                <img
-                  src={enemy.sprite || undefined}
-                  alt={enemy.name}
-                  className="h-44 pixel-perfect drop-shadow-2xl"
-                  style={{
-                    filter: 'drop-shadow(0 0 20px rgba(239,68,68,0.5)) drop-shadow(0 0 40px rgba(239,68,68,0.3))',
-                    transform: effects?.enemyShake ? 'translateX(6px)' : 'translateX(0)',
-                    transition: 'transform 100ms ease'
-                  }}
-                />
+                {enemy.sprite ? (
+                  <img
+                    src={enemy.sprite}
+                    alt={enemy.name || 'enemy'}
+                    className="h-44 pixel-perfect drop-shadow-2xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 20px rgba(239,68,68,0.5)) drop-shadow(0 0 40px rgba(239,68,68,0.3))',
+                      transform: effects?.enemyShake ? 'translateX(6px)' : 'translateX(0)',
+                      transition: 'transform 100ms ease'
+                    }}
+                    onError={(e) => {
+                      console.error('Failed to load enemy sprite:', enemy.sprite);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="text-red-500 text-6xl">👹</div>
+                )}
               </div>
             </div>
 

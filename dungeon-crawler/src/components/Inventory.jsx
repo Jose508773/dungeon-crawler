@@ -3,13 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Sword, Shield, Zap, Coins, X, TrendingUp } from 'lucide-react';
 
 // Import item sprites
+// Weapons
 import ironSword from '../assets/sprites/items/iron_sword.png';
+import shadowDagger from '../assets/sprites/items/shadow_dagger.png';
 import royalSword from '../assets/sprites/items/royal_sword.png';
 import enchantedBlade from '../assets/sprites/items/enchanted_blade.png';
+import frostBlade from '../assets/sprites/items/frost_blade.png';
 import spikedMace from '../assets/sprites/items/spiked_mace.png';
 import battleAxe from '../assets/sprites/items/battle_axe.png';
+import thunderHammer from '../assets/sprites/items/thunder_hammer.png';
 import crystalSpear from '../assets/sprites/items/crystal_spear.png';
+import demonSlayer from '../assets/sprites/items/demon_slayer.png';
+// Armor
 import leatherArmor from '../assets/sprites/items/leather_armor.png';
+import chainMail from '../assets/sprites/items/chain_mail.png';
+import plateArmor from '../assets/sprites/items/plate_armor.png';
+import dragonScaleArmor from '../assets/sprites/items/dragon_scale_armor.png';
+import magicRobe from '../assets/sprites/items/magic_robe.png';
+import divineArmor from '../assets/sprites/items/divine_armor.png';
+// Consumables
 import healthPotion from '../assets/sprites/items/health_potion.png';
 
 const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, onSellItem }) => {
@@ -18,14 +30,23 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
   const getItemSprite = (item) => {
     // Weapon sprites
     if (item.sprite === 'iron_sword.png') return ironSword;
+    if (item.sprite === 'shadow_dagger.png') return shadowDagger;
     if (item.sprite === 'royal_sword.png') return royalSword;
     if (item.sprite === 'enchanted_blade.png') return enchantedBlade;
+    if (item.sprite === 'frost_blade.png') return frostBlade;
     if (item.sprite === 'spiked_mace.png') return spikedMace;
     if (item.sprite === 'battle_axe.png') return battleAxe;
+    if (item.sprite === 'thunder_hammer.png') return thunderHammer;
     if (item.sprite === 'crystal_spear.png') return crystalSpear;
+    if (item.sprite === 'demon_slayer.png') return demonSlayer;
     
     // Armor sprites
     if (item.sprite === 'leather_armor.png') return leatherArmor;
+    if (item.sprite === 'chain_mail.png') return chainMail;
+    if (item.sprite === 'plate_armor.png') return plateArmor;
+    if (item.sprite === 'dragon_scale_armor.png') return dragonScaleArmor;
+    if (item.sprite === 'magic_robe.png') return magicRobe;
+    if (item.sprite === 'divine_armor.png') return divineArmor;
     
     // Consumable sprites
     if (item.sprite === 'health_potion.png') return healthPotion;
@@ -292,11 +313,26 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
                     </span>
                   </div>
                 )}
-                <p className="fantasy-text text-sm text-gray-300 mb-4">
+                <p className="fantasy-text text-sm text-gray-300 mb-3">
                   {selectedItem.item.description || 'A mysterious item from the dungeon.'}
                 </p>
               </div>
             </div>
+
+            {/* Item Lore */}
+            {selectedItem.item.lore && (
+              <div className="mb-6 p-4 bg-gradient-to-br from-amber-900/20 to-amber-950/40 border-2 border-amber-700/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-amber-400 text-lg">📜</span>
+                  <h4 className="fantasy-text text-sm font-bold text-amber-400 uppercase tracking-wider">
+                    Legend & Lore
+                  </h4>
+                </div>
+                <p className="fantasy-text text-sm text-amber-100/90 leading-relaxed italic">
+                  {selectedItem.item.lore}
+                </p>
+              </div>
+            )}
 
             {/* Item Stats */}
             <div className="space-y-3 mb-6">

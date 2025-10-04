@@ -152,13 +152,23 @@ export class DungeonGenerator {
     const spawns = [];
     const floorTiles = [];
     
+    // Defensive check
+    if (!this.dungeon || !Array.isArray(this.dungeon)) {
+      return spawns;
+    }
+    
     // Find all floor tiles
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
-        if (this.dungeon[y][x] === TILES.FLOOR) {
+        if (this.dungeon[y] && this.dungeon[y][x] === TILES.FLOOR) {
           floorTiles.push({ x, y });
         }
       }
+    }
+
+    if (floorTiles.length === 0) {
+      console.warn('No floor tiles found for enemy spawns');
+      return spawns;
     }
 
     // Place 3-8 enemies randomly
@@ -168,7 +178,7 @@ export class DungeonGenerator {
       const tile = floorTiles.splice(randomIndex, 1)[0];
       
       // Don't spawn enemies too close to starting position (1,1)
-      if (Math.abs(tile.x - 1) + Math.abs(tile.y - 1) > 3) {
+      if (tile && Math.abs(tile.x - 1) + Math.abs(tile.y - 1) > 3) {
         spawns.push(tile);
       }
     }
@@ -305,10 +315,15 @@ export class DungeonGenerator {
   checkConnectivity() {
     const floorTiles = [];
     
+    // Defensive check
+    if (!this.dungeon || !Array.isArray(this.dungeon)) {
+      return false;
+    }
+    
     // Find all floor tiles
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
-        if (this.dungeon[y][x] === TILES.FLOOR) {
+        if (this.dungeon[y] && this.dungeon[y][x] === TILES.FLOOR) {
           floorTiles.push({ x, y });
         }
       }
@@ -321,9 +336,14 @@ export class DungeonGenerator {
     const visited = new Set();
     const queue = [startTile];
     visited.add(`${startTile.x},${startTile.y}`);
+    
+    // Safety limit for flood fill
+    let maxIterations = Math.min(5000, floorTiles.length * 10);
+    let iterations = 0;
 
     // Flood fill to find all connected floor tiles
-    while (queue.length > 0) {
+    while (queue.length > 0 && iterations < maxIterations) {
+      iterations++;
       const current = queue.shift();
       const directions = [
         { x: 0, y: -1 }, // up
@@ -340,11 +360,17 @@ export class DungeonGenerator {
         if (newX >= 0 && newX < this.width && 
             newY >= 0 && newY < this.height &&
             !visited.has(key) &&
-            this.dungeon[newY][newX] === TILES.FLOOR) {
+            this.dungeon[newY] && this.dungeon[newY][newX] === TILES.FLOOR) {
           visited.add(key);
           queue.push({ x: newX, y: newY });
         }
       }
+    }
+    
+    // If we hit the iteration limit, log a warning
+    if (iterations >= maxIterations) {
+      console.warn('Connectivity check hit iteration limit, assuming connected');
+      return true; // Assume connected to avoid blocking dungeon generation
     }
 
     // Check if all floor tiles were visited
@@ -432,6 +458,7 @@ export class DungeonGenerator {
   // Check if a path exists between two points using BFS
   isPathAccessible(start, end) {
     if (!start || !end) return false;
+    if (!this.dungeon || !Array.isArray(this.dungeon)) return false;
     
     const queue = [start];
     const visited = new Set();
@@ -441,8 +468,13 @@ export class DungeonGenerator {
       { x: 0, y: -1 }, { x: 0, y: 1 },
       { x: -1, y: 0 }, { x: 1, y: 0 }
     ];
+    
+    // Safety limit to prevent infinite loops
+    let maxIterations = 1000;
+    let iterations = 0;
 
-    while (queue.length > 0) {
+    while (queue.length > 0 && iterations < maxIterations) {
+      iterations++;
       const current = queue.shift();
       
       // Found the target

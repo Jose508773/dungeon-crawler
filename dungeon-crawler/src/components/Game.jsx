@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import GameBoard from './GameBoard';
 import GameHUD from './GameHUD';
 import MenuPanel from './MenuPanel';
@@ -8,6 +8,8 @@ import CombatLog from './CombatLog';
 import GameOverScreen from './GameOverScreen';
 import BattleInterface from './BattleInterface';
 import LevelUpNotification from './LevelUpNotification';
+import SkillTree from './SkillTree';
+import Tutorial from './Tutorial';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { generateDungeon } from '../utils/DungeonGenerator';
@@ -15,7 +17,8 @@ import { createEnemy, getRandomEnemyType } from '../utils/EnemySystem';
 import { CombatSystem } from '../utils/CombatSystem';
 import { getChestLoot, applyItemStats, removeItemStats, ITEM_TYPES } from '../utils/ItemSystem';
 import { selectDungeonTheme, generateEnemyName, generateWeaponLoot, applyThemeMultipliers } from '../utils/ProceduralGenerator';
-import { Heart, ScrollText, Eye, EyeOff } from 'lucide-react';
+import { SkillSystem, SKILLS } from '../utils/SkillSystem';
+import { Heart, ScrollText, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 // Import bag icon
 import inventoryBag from '../assets/sprites/ui/inventory_bag.png';
@@ -46,7 +49,16 @@ const initialPlayer = {
   gold: 0,
   attack: 10,
   defense: 2,
-  direction: 'front'
+  direction: 'front',
+  // Skill-related properties
+  skillPoints: 2, // Start with 2 skill points
+  critChance: 0.1, // 10% base crit chance
+  critDamage: 1.8, // 180% crit damage
+  lifesteal: 0,
+  damageReduction: 0,
+  regeneration: 0,
+  hasLastStand: false,
+  lastStandUsedOnFloor: -1
 };
 
 // Initial inventory
@@ -94,6 +106,14 @@ const Game = () => {
   // Level up state
   const [levelUpData, setLevelUpData] = useState(null);
 
+  // Skills state
+  const [learnedSkills, setLearnedSkills] = useState({});
+  const [skillCooldowns, setSkillCooldowns] = useState({});
+  const [playerBuffs, setPlayerBuffs] = useState({});  // Used for temporary skill effects like Shield Block
+
+  // Tutorial state
+  const [showTutorial, setShowTutorial] = useState(false);
+
   const clearBattleTimeouts = useCallback(() => {
     battleTimeoutsRef.current.forEach(id => clearTimeout(id));
     battleTimeoutsRef.current = [];
@@ -104,11 +124,20 @@ const Game = () => {
     turnRef.current = turn;
   }, [turn]);
 
+  // Check if tutorial should be shown on first load
+  useEffect(() => {
+    const tutorialCompleted = localStorage.getItem('dungeonCrawlerTutorialCompleted');
+    if (!tutorialCompleted) {
+      setShowTutorial(true);
+    }
+  }, []);
+
   // Menu state
   const [openMenus, setOpenMenus] = useState({
     inventory: false,
     stats: false,
-    log: false
+    log: false,
+    skills: false
   });
 
   // Toggle menu visibility
@@ -220,6 +249,126 @@ const Game = () => {
     }]);
   }, []);
 
+  // Get current enemy in battle - memoized for performance with null safety
+  const currentEnemy = useMemo(() => {
+    if (!battle.active || !battle.currentEnemyId) return null;
+    if (!Array.isArray(enemies) || enemies.length === 0) return null;
+    
+    const enemy = enemies.find(e => e && e.id === battle.currentEnemyId);
+    
+    // Validate enemy has required properties
+    if (enemy && (!enemy.health || !enemy.maxHealth || !enemy.name)) {
+      console.warn('Invalid enemy state detected:', enemy);
+      return null;
+    }
+    
+    return enemy || null;
+  }, [battle.active, battle.currentEnemyId, enemies]);
+
+  // Handle learning a skill
+  const handleLearnSkill = useCallback((skillId) => {
+    const skill = SKILLS[skillId];
+    if (!skill) return;
+    
+    const currentLevel = learnedSkills[skillId] || 0;
+    const cost = SkillSystem.getSkillCost(skillId, currentLevel);
+    
+    // Check if can learn
+    if (!SkillSystem.canLearnSkill(skillId, learnedSkills)) {
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: `Cannot learn ${skill.name} - requirements not met!`, 
+        turn: turnRef.current 
+      }]);
+      return;
+    }
+    
+    if (player.skillPoints < cost) {
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: `Not enough skill points! Need ${cost}, have ${player.skillPoints}.`, 
+        turn: turnRef.current 
+      }]);
+      return;
+    }
+    
+    // Learn the skill
+    setLearnedSkills(prev => ({
+      ...prev,
+      [skillId]: (prev[skillId] || 0) + 1
+    }));
+    
+    setPlayer(prev => ({
+      ...prev,
+      skillPoints: prev.skillPoints - cost
+    }));
+    
+    setCombatLog(prev => [...prev.slice(-9), { 
+      message: `Learned ${skill.name} Level ${currentLevel + 1}!`, 
+      turn: turnRef.current 
+    }]);
+    
+    // Apply passive skills immediately
+    setPlayer(prev => SkillSystem.applyPassiveSkills(prev, { ...learnedSkills, [skillId]: currentLevel + 1 }));
+    
+    // Check for Last Stand passive
+    if (skillId === 'last_stand') {
+      setPlayer(prev => ({ ...prev, hasLastStand: true }));
+    }
+  }, [learnedSkills, player.skillPoints]);
+
+  // Handle using an active skill
+  const handleUseSkill = useCallback((skillId) => {
+    const skill = SKILLS[skillId];
+    if (!skill) return;
+    
+    const level = learnedSkills[skillId] || 0;
+    if (level === 0) return;
+    
+    const cooldown = skillCooldowns[skillId] || 0;
+    if (cooldown > 0) {
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: `${skill.name} is on cooldown! (${cooldown} turns remaining)`, 
+        turn: turnRef.current 
+      }]);
+      return;
+    }
+    
+    // Activate the skill
+    const result = SkillSystem.activateSkill(skillId, level, player, currentEnemy ? [currentEnemy] : []);
+    
+    if (result.success) {
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: result.message, 
+        turn: turnRef.current 
+      }]);
+      
+      // Set cooldown
+      setSkillCooldowns(prev => ({
+        ...prev,
+        [skillId]: skill.cooldown
+      }));
+      
+      // Apply skill effects
+      if (result.healAmount) {
+        setPlayer(prev => ({ ...prev, health: result.newHealth }));
+      }
+      
+      if (result.applyBuff) {
+        setPlayerBuffs(prev => ({
+          ...prev,
+          [result.applyBuff.type]: result.applyBuff
+        }));
+      }
+      
+      // If it's a damage skill, store for next attack
+      if (result.damageMultiplier) {
+        // This will be handled in the battle attack function
+        return { ...result, skillId };
+      }
+    }
+    
+    return result;
+  }, [learnedSkills, skillCooldowns, player, currentEnemy]);
+
   // Update explored tiles based on player vision radius
   const updateExploredTiles = useCallback((playerX, playerY, visionRadius = 4) => {
     setExploredTiles(prev => {
@@ -248,6 +397,25 @@ const Game = () => {
   // Generate a new dungeon level with enemy limit
   const generateNewDungeon = useCallback((level = 1) => {
     try {
+      // Clear any active enemy turn processing to prevent stale callbacks
+      if (enemyTurnTimeoutRef.current) {
+        clearTimeout(enemyTurnTimeoutRef.current);
+        enemyTurnTimeoutRef.current = null;
+      }
+      
+      // Clear movement locks to allow player to move on new floor
+      if (movementTimeoutRef.current) {
+        clearTimeout(movementTimeoutRef.current);
+        movementTimeoutRef.current = null;
+      }
+      setIsMoving(false);
+      combatProcessingRef.current = false;
+      lastMoveTimeRef.current = 0;
+      
+      // Reset turn counter for new floor
+      setTurn(0);
+      turnRef.current = 0;
+      
       // Select theme for this level
       const theme = selectDungeonTheme(level);
       setDungeonTheme(theme);
@@ -289,6 +457,11 @@ const Game = () => {
       
       setEnemies(newEnemies);
       console.log(`Generated ${newEnemies.length} ${theme.name} enemies for level ${level}`);
+      
+      // Verify enemies are class instances
+      if (newEnemies.length > 0) {
+        console.log('Enemy type check:', typeof newEnemies[0].getNextMove, newEnemies[0].constructor.name);
+      }
       
       // Reset player position
       setPlayer(prev => ({
@@ -335,11 +508,15 @@ const Game = () => {
 
   // Handle player movement with optimizations
   const movePlayer = useCallback((dx, dy) => {
-    // Performance checks
-    if (gameState !== 'playing' || isMoving || combatProcessingRef.current) return;
+    // Performance checks - prevent concurrent movement processing
+    if (gameState !== 'playing' || isMoving || combatProcessingRef.current) {
+      return;
+    }
     
     const now = Date.now();
-    if (now - lastMoveTimeRef.current < 50) return; // Throttle movement to prevent spam
+    if (now - lastMoveTimeRef.current < 100) { // Increased throttle for stability
+      return;
+    }
     lastMoveTimeRef.current = now;
     
     setIsMoving(true);
@@ -369,8 +546,16 @@ const Game = () => {
         return prevPlayer;
       }
       
-      // Check for walls
-      if (dungeon[newY] && dungeon[newY][newX] === 'wall') {
+      // Check for walls with null safety
+      if (!dungeon || !Array.isArray(dungeon) || !dungeon[newY] || !Array.isArray(dungeon[newY])) {
+        console.warn('Invalid dungeon state during movement');
+        if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
+        setIsMoving(false);
+        combatProcessingRef.current = false;
+        return prevPlayer;
+      }
+      
+      if (dungeon[newY][newX] === 'wall') {
         if (movementTimeoutRef.current) clearTimeout(movementTimeoutRef.current);
         setIsMoving(false);
         combatProcessingRef.current = false;
@@ -384,8 +569,10 @@ const Game = () => {
       else if (dy > 0) direction = 'front';
       else if (dy < 0) direction = 'back';
       
-      // Prevent walking onto an enemy's tile
-      const enemyOnTarget = enemies.find(e => e.isAlive && e.x === newX && e.y === newY);
+      // Prevent walking onto an enemy's tile with null safety
+      const enemyOnTarget = Array.isArray(enemies) 
+        ? enemies.find(e => e && e.isAlive && e.x === newX && e.y === newY) 
+        : null;
 
       const newPlayer = enemyOnTarget
         ? { ...prevPlayer, direction }
@@ -393,13 +580,17 @@ const Game = () => {
 
       // Update fog of war when player moves to new position
       if (!enemyOnTarget) {
-        setTimeout(() => updateExploredTiles(newX, newY), 0);
+        try {
+          setTimeout(() => updateExploredTiles(newX, newY), 0);
+        } catch (err) {
+          console.error('Error updating explored tiles:', err);
+        }
       }
 
       // Trigger encounter if adjacent to enemies
       try {
         const adjacent = CombatSystem.getAdjacentEnemies(newPlayer, enemies);
-        if (adjacent && adjacent.length > 0) {
+        if (adjacent && Array.isArray(adjacent) && adjacent.length > 0) {
           // Create battle queue (fight one-by-one)
           const queueIds = adjacent.map(e => e.id);
           setBattle({
@@ -429,11 +620,6 @@ const Game = () => {
   }, [gameState, dungeon, enemies, isMoving, updateExploredTiles]);
 
   // Battle helpers
-  const getCurrentEnemy = useCallback(() => {
-    if (!battle.active || !battle.currentEnemyId) return null;
-    return enemies.find(e => e.id === battle.currentEnemyId) || null;
-  }, [battle.active, battle.currentEnemyId, enemies]);
-
   const endBattleIfNeeded = useCallback((updatedPlayer) => {
     // If more enemies queued, start next
     if (battle.queue.length > 0) {
@@ -467,13 +653,16 @@ const Game = () => {
 
   const handleBattleAttack = useCallback(() => {
     if (!battle.active || !battle.playerTurn) return;
-    const enemy = getCurrentEnemy();
-    if (!enemy) return;
+    if (!currentEnemy) {
+      console.warn('Battle attack called but no current enemy');
+      return;
+    }
 
-    // Clone objects for safe updates
-    const enemyRef = enemy;
-    const playerClone = { ...player };
-    const result = CombatSystem.playerAttackEnemy(playerClone, enemyRef);
+    try {
+      // Clone objects for safe updates
+      const enemyRef = currentEnemy;
+      const playerClone = { ...player };
+      const result = CombatSystem.playerAttackEnemy(playerClone, enemyRef);
 
     // Update enemy state
     // Preserve class instance reference to keep methods like takeDamage working
@@ -528,7 +717,7 @@ const Game = () => {
     setBattle(prev => ({ ...prev, playerTurn: false }));
 
     const counterTimeout = setTimeout(() => {
-      const enemyAttack = CombatSystem.enemyAttackPlayer(enemyRef, playerClone);
+      const enemyAttack = CombatSystem.enemyAttackPlayer(enemyRef, playerClone, playerBuffs);
       setPlayer(prev => ({ ...prev, health: playerClone.health }));
       setCombatLog(prev => [...prev.slice(-9), { message: enemyAttack.message, turn: turnRef.current + 2 }]);
 
@@ -549,11 +738,17 @@ const Game = () => {
         return;
       }
 
-      // Back to player's turn
+        // Back to player's turn
       setBattle(prev => ({ ...prev, playerTurn: true }));
     }, 220);
     battleTimeoutsRef.current.push(counterTimeout);
-  }, [battle.active, battle.playerTurn, getCurrentEnemy, player, endBattleIfNeeded, clearBattleTimeouts, pushFloat]);
+    
+    } catch (error) {
+      console.error('Battle attack error:', error);
+      // Fallback: end battle if something goes wrong
+      endBattleIfNeeded();
+    }
+  }, [battle.active, battle.playerTurn, currentEnemy, player, playerBuffs, endBattleIfNeeded, clearBattleTimeouts, pushFloat]);
 
   const handleBattleRun = useCallback(() => {
     if (!battle.active) return;
@@ -576,13 +771,12 @@ const Game = () => {
     setInventory(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
 
     // Using an item consumes your turn → enemy counterattacks
-    const enemy = getCurrentEnemy();
-    if (!enemy) return;
+    if (!currentEnemy) return;
     setBattle(prev => ({ ...prev, playerTurn: false }));
-    const enemyRef = enemy;
+    const enemyRef = currentEnemy;
     const playerClone = { ...player };
     const counterTimeout = setTimeout(() => {
-      const enemyAttack = CombatSystem.enemyAttackPlayer(enemyRef, playerClone);
+      const enemyAttack = CombatSystem.enemyAttackPlayer(enemyRef, playerClone, playerBuffs);
       setPlayer(prev => ({ ...prev, health: playerClone.health }));
       setCombatLog(prev => [...prev.slice(-9), { message: enemyAttack.message, turn: turnRef.current + 2 }]);
       setBattleFx(prev => ({ ...prev, playerShake: true }));
@@ -600,16 +794,127 @@ const Game = () => {
       setBattle(prev => ({ ...prev, playerTurn: true }));
     }, 220);
     battleTimeoutsRef.current.push(counterTimeout);
-  }, [battle.active, battle.playerTurn, inventory.items, getCurrentEnemy, player, clearBattleTimeouts, pushFloat]);
+  }, [battle.active, battle.playerTurn, inventory.items, currentEnemy, player, playerBuffs, clearBattleTimeouts, pushFloat]);
 
-  // Handle enemy turns - DISABLED FOR STABILITY
+  // Handle enemy turns - RE-ENABLED WITH ENHANCED AI
   useEffect(() => {
-    if (gameState !== 'playing' || turn === 0) return;
+    if (gameState !== 'playing' || turn === 0 || isMoving || combatProcessingRef.current) return;
 
-    // TEMPORARY: Disable enemy AI to isolate the performance issue
-    console.log('Enemy turn skipped for debugging - Turn:', turn);
-    // Enemy AI will be re-enabled once stability is confirmed
-  }, [turn, gameState]);
+    // Clear any existing enemy turn timeout
+    if (enemyTurnTimeoutRef.current) {
+      clearTimeout(enemyTurnTimeoutRef.current);
+    }
+
+    // Process enemy turns with a small delay (optimized)
+    enemyTurnTimeoutRef.current = setTimeout(() => {
+      setEnemies(prevEnemies => {
+        // Defensive checks
+        if (!Array.isArray(prevEnemies) || prevEnemies.length === 0) {
+          return prevEnemies;
+        }
+        
+        // Filter living enemies first for better performance
+        const livingEnemies = prevEnemies.filter(e => e && e.isAlive);
+        if (livingEnemies.length === 0) return prevEnemies;
+
+        let hasChanges = false;
+        
+        // Process enemy movements - mutate in place to preserve class methods
+        prevEnemies.forEach(enemy => {
+          if (!enemy || !enemy.isAlive) return;
+
+          // Defensive check: ensure enemy still has getNextMove method
+          if (typeof enemy.getNextMove !== 'function') {
+            console.error('Enemy lost class methods! Type:', enemy.constructor?.name || 'Unknown', 'Enemy:', enemy);
+            return;
+          }
+
+          try {
+            // Get next move from enemy AI with null safety
+            if (!dungeon || !Array.isArray(dungeon) || !player) {
+              return;
+            }
+            
+            const move = enemy.getNextMove(dungeon, prevEnemies, player, turn);
+            
+            if (move && typeof move.x === 'number' && typeof move.y === 'number' && 
+                (move.x !== enemy.x || move.y !== enemy.y)) {
+              hasChanges = true;
+              // Update enemy position directly (preserves class instance)
+              enemy.x = move.x;
+              enemy.y = move.y;
+            }
+          } catch (err) {
+            console.error('Error in enemy AI movement:', err, enemy);
+          }
+        });
+
+        // Only trigger re-render if changes were made
+        return hasChanges ? [...prevEnemies] : prevEnemies;
+      });
+
+      // Apply regeneration
+      if (player.regeneration > 0) {
+        setPlayer(prev => ({
+          ...prev,
+          health: SkillSystem.applyRegeneration(prev, learnedSkills)
+        }));
+      }
+
+      // Reduce skill cooldowns (optimized to avoid unnecessary updates)
+      setSkillCooldowns(prev => {
+        const keys = Object.keys(prev);
+        if (keys.length === 0) return prev;
+        
+        const updated = {};
+        let hasChanges = false;
+        
+        keys.forEach(skillId => {
+          const newCooldown = Math.max(0, prev[skillId] - 1);
+          if (newCooldown > 0) {
+            updated[skillId] = newCooldown;
+            hasChanges = true;
+          } else if (prev[skillId] > 0) {
+            hasChanges = true; // Cooldown expired
+          }
+        });
+        
+        return hasChanges ? updated : prev;
+      });
+
+      // Reduce buff durations (optimized)
+      setPlayerBuffs(prev => {
+        const keys = Object.keys(prev);
+        if (keys.length === 0) return prev;
+        
+        const updated = {};
+        let hasChanges = false;
+        
+        keys.forEach(buffType => {
+          const buff = prev[buffType];
+          if (buff.duration) {
+            const newDuration = buff.duration - 1;
+            if (newDuration > 0) {
+              updated[buffType] = { ...buff, duration: newDuration };
+              hasChanges = true;
+            } else {
+              hasChanges = true; // Buff expired
+            }
+          } else {
+            updated[buffType] = buff;
+          }
+        });
+        
+        return hasChanges ? updated : prev;
+      });
+    }, 100);
+
+    return () => {
+      if (enemyTurnTimeoutRef.current) {
+        clearTimeout(enemyTurnTimeoutRef.current);
+      }
+    };
+  }, [turn, gameState, dungeon, player, isMoving, learnedSkills]);
 
   // Handle keyboard input with optimized debouncing
   useEffect(() => {
@@ -677,9 +982,20 @@ const Game = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [gameState, movePlayer, toggleUI, isMoving]);
 
-  // Handle tile interactions
+  // Handle tile interactions with defensive checks
   const handleTileInteraction = useCallback((x, y) => {
-    const tile = dungeon[y] && dungeon[y][x];
+    // Bounds checking
+    if (!dungeon || !Array.isArray(dungeon)) {
+      console.warn('Invalid dungeon in handleTileInteraction');
+      return;
+    }
+    
+    if (y < 0 || y >= dungeon.length || !dungeon[y] || x < 0 || x >= dungeon[y].length) {
+      console.warn('Tile interaction out of bounds:', { x, y });
+      return;
+    }
+    
+    const tile = dungeon[y][x];
     
     if (tile === 'chest') {
       // Get chest loot based on dungeon level
@@ -740,10 +1056,12 @@ const Game = () => {
     }
   }, [dungeon, dungeonLevel, dungeonTheme, turn, generateNewDungeon]);
 
-  // Check for interactions when player moves - optimized
+  // Check for interactions when player moves - optimized with defensive checks
   useEffect(() => {
     if (gameState !== 'playing' || isMoving || combatProcessingRef.current) return;
-    if (!dungeon[player.y] || !dungeon[player.y][player.x]) return;
+    if (!dungeon || !Array.isArray(dungeon)) return;
+    if (!player || typeof player.y !== 'number' || typeof player.x !== 'number') return;
+    if (!dungeon[player.y] || !Array.isArray(dungeon[player.y]) || !dungeon[player.y][player.x]) return;
     
     const currentTile = dungeon[player.y][player.x];
     if (currentTile === 'chest' || currentTile === 'stairs') {
@@ -767,7 +1085,7 @@ const Game = () => {
         clearTimeout(timeoutId);
       };
     }
-  }, [player.x, player.y, gameState, dungeon, handleTileInteraction, isMoving]);
+  }, [player.x, player.y, player, gameState, dungeon, handleTileInteraction, isMoving]);
 
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
@@ -804,6 +1122,9 @@ const Game = () => {
     setCombatLog([]);
     setDungeonLevel(1);
     setIsMoving(false);
+    setLearnedSkills({});
+    setSkillCooldowns({});
+    setPlayerBuffs({});
     generateNewDungeon(1);
   }, [generateNewDungeon]);
 
@@ -907,6 +1228,32 @@ const Game = () => {
       >
         <CombatLog messages={combatLog} />
       </MenuPanel>
+
+      <MenuPanel
+        isOpen={openMenus.skills}
+        onClose={() => toggleMenu('skills')}
+        title="Skills & Abilities"
+        icon={Sparkles}
+        position="right"
+        width="w-[550px]"
+      >
+        <SkillTree
+          player={player}
+          learnedSkills={learnedSkills}
+          skillPoints={player.skillPoints}
+          onLearnSkill={handleLearnSkill}
+          onUseSkill={handleUseSkill}
+          skillCooldowns={skillCooldowns}
+        />
+      </MenuPanel>
+
+      {/* Tutorial */}
+      {showTutorial && (
+        <Tutorial
+          onClose={() => setShowTutorial(false)}
+          isFirstTime={true}
+        />
+      )}
 
       {/* Game Over Screen */}
       {gameState === 'gameOver' && (
