@@ -1277,6 +1277,9 @@ const Game = () => {
           onAttack={handleBattleAttack}
           onUseItem={handleBattleUseItem}
           onRun={handleBattleRun}
+          learnedSkills={learnedSkills}
+          skillCooldowns={skillCooldowns}
+          onUseSkill={handleUseSkill}
         />
       )}
 

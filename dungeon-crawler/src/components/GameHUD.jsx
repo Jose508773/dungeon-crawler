@@ -115,13 +115,33 @@ const GameHUD = ({
           <div className="flex gap-2 pointer-events-auto">
             <button
               onClick={() => onToggleMenu('inventory')}
-              className="pixel-btn p-2 magical-glow"
+              className="pixel-btn p-4 magical-glow relative overflow-visible"
               title="Toggle Inventory (I)"
+              style={{
+                background: 'linear-gradient(135deg, rgba(139, 69, 19, 0.95), rgba(101, 45, 13, 1))',
+                borderWidth: '3px',
+                borderColor: 'rgb(245, 158, 11)',
+                boxShadow: '0 0 20px rgba(245, 158, 11, 0.5), inset 0 0 10px rgba(139, 69, 19, 0.8)',
+                minWidth: '4rem',
+                minHeight: '4rem'
+              }}
             >
               <img 
                 src={inventoryBag} 
                 alt="Inventory" 
-                className="w-5 h-5 pixel-perfect" 
+                className="w-10 h-10 pixel-perfect" 
+                style={{
+                  filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.8)) drop-shadow(0 0 12px rgba(217, 119, 6, 0.6))',
+                  transform: 'scale(1.2)',
+                  imageRendering: 'pixelated'
+                }}
+              />
+              <div 
+                className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
+                style={{
+                  background: 'radial-gradient(circle, rgb(251, 191, 36), rgb(245, 158, 11))',
+                  boxShadow: '0 0 6px rgb(245, 158, 11)'
+                }}
               />
             </button>
             <button

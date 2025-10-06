@@ -14,6 +14,12 @@ import battleAxe from '../assets/sprites/items/battle_axe.png';
 import thunderHammer from '../assets/sprites/items/thunder_hammer.png';
 import crystalSpear from '../assets/sprites/items/crystal_spear.png';
 import demonSlayer from '../assets/sprites/items/demon_slayer.png';
+import holyHammer from '../assets/sprites/items/holy_hammer.png';
+import obsidianBlade from '../assets/sprites/items/obsidian_blade.png';
+import infernoSword from '../assets/sprites/items/inferno_sword.png';
+import voidScythe from '../assets/sprites/items/void_scythe.png';
+import celestialBlade from '../assets/sprites/items/celestial_blade.png';
+import arcaneStaff from '../assets/sprites/items/arcane_staff.png';
 // Armor
 import leatherArmor from '../assets/sprites/items/leather_armor.png';
 import chainMail from '../assets/sprites/items/chain_mail.png';
@@ -21,6 +27,10 @@ import plateArmor from '../assets/sprites/items/plate_armor.png';
 import dragonScaleArmor from '../assets/sprites/items/dragon_scale_armor.png';
 import magicRobe from '../assets/sprites/items/magic_robe.png';
 import divineArmor from '../assets/sprites/items/divine_armor.png';
+import mysticShield from '../assets/sprites/items/mystic_shield.png';
+import guardianPlate from '../assets/sprites/items/guardian_plate.png';
+import runicArmor from '../assets/sprites/items/runic_armor.png';
+import shadowCloak from '../assets/sprites/items/shadow_cloak.png';
 // Consumables
 import healthPotion from '../assets/sprites/items/health_potion.png';
 
@@ -39,6 +49,12 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
     if (item.sprite === 'thunder_hammer.png') return thunderHammer;
     if (item.sprite === 'crystal_spear.png') return crystalSpear;
     if (item.sprite === 'demon_slayer.png') return demonSlayer;
+    if (item.sprite === 'holy_hammer.png') return holyHammer;
+    if (item.sprite === 'obsidian_blade.png') return obsidianBlade;
+    if (item.sprite === 'inferno_sword.png') return infernoSword;
+    if (item.sprite === 'void_scythe.png') return voidScythe;
+    if (item.sprite === 'celestial_blade.png') return celestialBlade;
+    if (item.sprite === 'arcane_staff.png') return arcaneStaff;
     
     // Armor sprites
     if (item.sprite === 'leather_armor.png') return leatherArmor;
@@ -47,6 +63,10 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
     if (item.sprite === 'dragon_scale_armor.png') return dragonScaleArmor;
     if (item.sprite === 'magic_robe.png') return magicRobe;
     if (item.sprite === 'divine_armor.png') return divineArmor;
+    if (item.sprite === 'mystic_shield.png') return mysticShield;
+    if (item.sprite === 'guardian_plate.png') return guardianPlate;
+    if (item.sprite === 'runic_armor.png') return runicArmor;
+    if (item.sprite === 'shadow_cloak.png') return shadowCloak;
     
     // Consumable sprites
     if (item.sprite === 'health_potion.png') return healthPotion;
@@ -132,7 +152,7 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
                   <img 
                     src={getItemSprite(inventory.weapon)} 
                     alt={inventory.weapon.name}
-                    className="w-14 h-14 pixel-perfect"
+                    className={`w-14 h-14 pixel-perfect item-with-rarity ${inventory.weapon.rarity ? `rarity-glow-${inventory.weapon.rarity}` : ''}`}
                     title={`${inventory.weapon.name} (Attack: +${inventory.weapon.attack})`}
                   />
                   <div className={`absolute -top-2 -right-2 ${getRarityColor(inventory.weapon.rarity)}`}>
@@ -168,7 +188,7 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
                   <img 
                     src={getItemSprite(inventory.armor)} 
                     alt={inventory.armor.name}
-                    className="w-14 h-14 pixel-perfect"
+                    className={`w-14 h-14 pixel-perfect item-with-rarity ${inventory.armor.rarity ? `rarity-glow-${inventory.armor.rarity}` : ''}`}
                     title={`${inventory.armor.name} (Defense: +${inventory.armor.defense})`}
                   />
                   <div className={`absolute -top-2 -right-2 ${getRarityColor(inventory.armor.rarity)}`}>
@@ -200,7 +220,7 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
             {inventory.items.map((item, index) => (
               <div 
                 key={`${item.id}-${index}`} 
-                className="inventory-slot-enhanced"
+                className={`inventory-slot-enhanced ${item.rarity && !item.procedural ? `border-glow-${item.rarity}` : ''}`}
                 title={`${item.name}${item.procedural ? ' [Procedural]' : ''}\n${item.description || ''}\n\nClick to ${item.type === 'consumable' ? 'use' : 'equip'}`}
                 onClick={() => handleItemClick(item, index)}
                 style={item.procedural && item.rarityColor ? {
@@ -212,7 +232,7 @@ const Inventory = ({ inventory, player, onUseItem, onUnequipItem, onEquipItem, o
                   <img 
                     src={getItemSprite(item)} 
                     alt={item.name}
-                    className="w-14 h-14 pixel-perfect"
+                    className={`w-14 h-14 pixel-perfect item-with-rarity ${item.rarity && !item.procedural ? `rarity-glow-${item.rarity}` : ''}`}
                   />
                   <div className={`absolute -top-2 -right-2 ${getRarityColor(item.rarity)}`}>
                     <Zap className="w-4 h-4 drop-shadow-lg" style={

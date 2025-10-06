@@ -136,6 +136,78 @@ export const WEAPONS = {
     sprite: 'demon_slayer.png',
     description: 'A holy blade forged to vanquish demonic forces',
     lore: 'Forged in the sacred flames of Mount Celestia by the order of the Radiant Paladins, this blade was created for one purpose: to banish demons back to the abyss. The sword\'s metal was blessed by seven high priests and quenched in holy water from the Fountain of Purity. Inscribed along its blade are prayers in the language of angels, which glow with golden light when evil draws near. The blade burns demons on contact, their screams echoing as they are sent back to the infernal realms. Only those pure of heart can wield its full power.'
+  },
+  holy_hammer: {
+    id: 'holy_hammer',
+    name: 'Holy Warhammer',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.UNCOMMON,
+    attack: 22,
+    defense: 0,
+    value: 140,
+    sprite: 'holy_hammer.png',
+    description: 'A blessed warhammer that smites evil',
+    lore: 'Blessed by temple clerics and forged with sacred silver, this warhammer is a favorite among paladins who venture into cursed dungeons. The hammerhead is inscribed with holy symbols that glow faintly in the presence of undead. Its heavy strikes not only crush bone and armor but also purify tainted ground with each impact. The weapon hums with righteous power when wielded by those with good intentions.'
+  },
+  obsidian_blade: {
+    id: 'obsidian_blade',
+    name: 'Obsidian Edge',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.RARE,
+    attack: 42,
+    defense: 0,
+    value: 380,
+    sprite: 'obsidian_blade.png',
+    description: 'A razor-sharp blade forged from volcanic glass',
+    lore: 'Crafted from obsidian harvested from the volcanic peaks of Mount Infernus, this blade is impossibly sharp—capable of cutting through steel like parchment. The black glass reflects no light, making the blade nearly invisible in shadows. Ancient legends tell of assassins who wielded these blades, their strikes so swift and clean that victims didn\'t realize they\'d been cut until they fell. The blade never dulls, maintained by the latent volcanic energy within the obsidian.'
+  },
+  inferno_sword: {
+    id: 'inferno_sword',
+    name: 'Inferno Blade',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.EPIC,
+    attack: 58,
+    defense: 3,
+    value: 750,
+    sprite: 'inferno_sword.png',
+    description: 'A blazing sword wreathed in eternal flames',
+    lore: 'Forged in the heart of an active volcano and cooled in dragon fire, this sword burns with an eternal flame that cannot be extinguished. The blade radiates intense heat, causing the air around it to shimmer and waver. Warriors who wield it report feeling the fire\'s warmth coursing through their veins, filling them with burning determination. The Inferno Blade leaves trails of fire with each swing, and its strikes can ignite flammable materials on contact. Only those with the strength to master its fury can hope to wield it effectively.'
+  },
+  void_scythe: {
+    id: 'void_scythe',
+    name: 'Void Reaper',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.LEGENDARY,
+    attack: 75,
+    defense: 0,
+    value: 1600,
+    sprite: 'void_scythe.png',
+    description: 'A cursed scythe that harvests souls from the void',
+    lore: 'This otherworldly weapon was pulled from the void between dimensions by a mad sorcerer seeking ultimate power. The scythe\'s blade appears to be made of solidified darkness, and looking at it for too long causes vertigo as if staring into an endless abyss. It doesn\'t cut flesh so much as it severs the connection between body and soul. Those killed by the Void Reaper are said to be trapped in the void forever, unable to find peace. The weapon whispers dark promises to its wielder, slowly corrupting even the strongest wills. Great power comes at a terrible price.'
+  },
+  celestial_blade: {
+    id: 'celestial_blade',
+    name: 'Celestial Sword',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.LEGENDARY,
+    attack: 68,
+    defense: 7,
+    value: 1400,
+    sprite: 'celestial_blade.png',
+    description: 'A divine sword blessed by the heavens above',
+    lore: 'This magnificent blade fell from the heavens during a meteor shower, embedded in a stone at the site of an ancient temple. Crafted from star metal and imbued with celestial blessings, the sword glows with a soft azure light that intensifies in darkness. The blade is perfectly balanced and impossibly light, allowing even novice warriors to wield it with grace. Angels are said to guide the hand of whoever wields this weapon in righteous battle. Evil creatures recoil from its holy radiance, and those pure of heart find their strength doubled when holding it.'
+  },
+  arcane_staff: {
+    id: 'arcane_staff',
+    name: 'Arcane Scepter',
+    type: ITEM_TYPES.WEAPON,
+    rarity: ITEM_RARITY.EPIC,
+    attack: 52,
+    defense: 5,
+    value: 680,
+    sprite: 'arcane_staff.png',
+    description: 'A mystical staff crackling with raw magical energy',
+    lore: 'Carved from the heartwood of the ancient World Tree and crowned with a crystal that captures pure magical essence, this staff is a channeling focus of immense power. Archmages of the Eternal Sanctum spend decades mastering the use of such artifacts. The staff amplifies magical abilities, allowing spells to be cast with greater precision and power. Runes along its length pulse with arcane energy, and the crystal at its tip shifts colors based on the ambient magical forces. In battle, it can unleash devastating magical strikes that pierce through conventional defenses.'
   }
 };
 
@@ -212,6 +284,54 @@ export const ARMOR = {
     sprite: 'divine_armor.png',
     description: 'Holy armor blessed by celestial beings',
     lore: 'Bestowed upon the Chosen Champions by the gods themselves, this armor radiates divine power. Crafted in the Celestial Forge, it was cooled in the tears of angels and blessed by the light of a thousand prayers. The armor glows with a soft golden light that intensifies in the presence of evil, and undead creatures recoil from its holy presence. It repairs itself when damaged and never tarnishes or degrades. Only those deemed worthy by the divine can wear it—others find it unbearably heavy. Legends say wearing this armor grants the protection of the gods themselves.'
+  },
+  mystic_shield: {
+    id: 'mystic_shield',
+    name: 'Mystic Shield',
+    type: ITEM_TYPES.ARMOR,
+    rarity: ITEM_RARITY.UNCOMMON,
+    attack: 0,
+    defense: 10,
+    value: 130,
+    sprite: 'mystic_shield.png',
+    description: 'A shield imbued with protective magic',
+    lore: 'Created by the Shield Mages of the Arcane Tower, this shield bears enchantments that create a magical barrier upon impact. The shield\'s surface shows swirling patterns that shift and change, mesmerizing those who stare too long. It\'s lighter than it appears and can deflect not just physical attacks but also minor magical projectiles. Warriors who bear this shield report feeling a protective presence watching over them in battle.'
+  },
+  guardian_plate: {
+    id: 'guardian_plate',
+    name: 'Guardian Plate',
+    type: ITEM_TYPES.ARMOR,
+    rarity: ITEM_RARITY.RARE,
+    attack: 0,
+    defense: 18,
+    value: 420,
+    sprite: 'guardian_plate.png',
+    description: 'Heavy armor worn by royal guardians',
+    lore: 'This impressive suit of armor was commissioned for the elite Royal Guard who protect the throne. Made from reinforced steel and decorated with the kingdom\'s emblems, it represents both martial prowess and unwavering loyalty. The armor is designed to withstand prolonged combat, with reinforced joints and overlapping plates. Those who wear the Guardian Plate carry the weight of their duty to protect the innocent and uphold justice. It has been passed down through generations of guardians, each adding their own mark of honor.'
+  },
+  runic_armor: {
+    id: 'runic_armor',
+    name: 'Runic Battlegear',
+    type: ITEM_TYPES.ARMOR,
+    rarity: ITEM_RARITY.EPIC,
+    attack: 0,
+    defense: 28,
+    value: 650,
+    sprite: 'runic_armor.png',
+    description: 'Ancient armor inscribed with powerful runes',
+    lore: 'Forged by the legendary Runesmiths of the northern clans, every inch of this armor is covered in intricate runic inscriptions. Each rune channels a different protective magic—some deflect blows, others absorb impacts, and a few even heal minor wounds. The armor glows faintly when its protective magic activates, creating a shimmering barrier around the wearer. It took master craftsmen years to complete, and the knowledge of creating such armor has been lost to time. Warriors who wear it feel connected to the ancient heroes who wore similar gear in ages past.'
+  },
+  shadow_cloak: {
+    id: 'shadow_cloak',
+    name: 'Shadow Cloak',
+    type: ITEM_TYPES.ARMOR,
+    rarity: ITEM_RARITY.RARE,
+    attack: 0,
+    defense: 15,
+    value: 380,
+    sprite: 'shadow_cloak.png',
+    description: 'A mysterious cloak that bends shadows around its wearer',
+    lore: 'Woven from threads that absorbed the essence of shadows, this cloak makes its wearer harder to detect and strike. It seems to shift and flow like liquid darkness, and those who wear it report feeling as if they\'re wrapped in the night itself. The cloak doesn\'t make the wearer invisible, but it causes enemies to hesitate and misjudge their attacks. Rogues and assassins prize these cloaks for their ability to blend into darkness. Some say the cloak has a mind of its own, whispering secrets of the shadows to those brave enough to listen.'
   }
 };
 
