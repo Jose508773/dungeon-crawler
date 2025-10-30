@@ -5,12 +5,15 @@ const MODIFIERS = [
     id: 'glass_cannon',
     name: 'Glass Cannon',
     description: '+50% attack, -25% max health',
-    apply: (player) => ({
-      ...player,
-      attack: Math.round(player.attack * 1.5),
-      maxHealth: Math.max(1, Math.round(player.maxHealth * 0.75)),
-      health: Math.max(1, Math.round(player.maxHealth * 0.75))
-    })
+    apply: (player) => {
+      const newMaxHealth = Math.max(1, Math.round(player.maxHealth * 0.75));
+      return {
+        ...player,
+        attack: Math.round(player.attack * 1.5),
+        maxHealth: newMaxHealth,
+        health: Math.min(newMaxHealth, Math.max(1, Math.round(player.health * 0.75)))
+      };
+    }
   },
   {
     id: 'bulwark',

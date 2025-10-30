@@ -506,21 +506,24 @@ const Game = () => {
 
   // Initialize dungeon on component mount
   useEffect(() => {
-    generateNewDungeon(1);
-    // Apply meta-progression modifiers at run start
+    // Apply modifiers synchronously before generating dungeon
     const metaMods = getMetaPlayerModifiers();
+    let startingPlayer = { ...initialPlayer };
+    
+    // Apply meta-progression modifiers first
     if (metaMods && metaMods.baseStatMultiplier && metaMods.baseStatMultiplier !== 1.0) {
-      setPlayer(prev => ({
-        ...prev,
-        attack: Math.round((prev.attack || 10) * metaMods.baseStatMultiplier),
-        defense: Math.round((prev.defense || 2) * metaMods.baseStatMultiplier),
-        maxHealth: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier),
-        health: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier)
-      }));
+      startingPlayer.attack = Math.round((startingPlayer.attack || 10) * metaMods.baseStatMultiplier);
+      startingPlayer.defense = Math.round((startingPlayer.defense || 2) * metaMods.baseStatMultiplier);
+      startingPlayer.maxHealth = Math.round((startingPlayer.maxHealth || 100) * metaMods.baseStatMultiplier);
+      startingPlayer.health = startingPlayer.maxHealth;
     }
+    
     // Apply per-run build modifiers
     const picks = rollRunModifiers(2 + Math.floor(Math.random() * 2));
-    setPlayer(prev => applyRunModifiers(prev, picks));
+    startingPlayer = applyRunModifiers(startingPlayer, picks);
+    
+    setPlayer(startingPlayer);
+    generateNewDungeon(1);
   }, [generateNewDungeon]);
 
   // Reset movement lock when game state changes
@@ -740,7 +743,11 @@ const Game = () => {
 
         // If enemy defeated, grant rewards and proceed
         if (!enemyRef.isAlive) {
-          const rewards = CombatSystem.applyRewards(playerClone, [{ damage: totalDamage, enemyDefeated: true }]);
+          const rewards = CombatSystem.applyRewards(playerClone, [{
+            experience: enemyRef.experience || 0,
+            gold: enemyRef.gold || 0,
+            enemyDefeated: true
+          }]);
           setPlayer(prev => ({
             ...prev,
             experience: playerClone.experience,
@@ -1020,7 +1027,7 @@ const Game = () => {
       if (player.regeneration > 0) {
         setPlayer(prev => ({
           ...prev,
-          health: SkillSystem.applyRegeneration(prev, learnedSkills)
+          health: SkillSystem.applyRegeneration(prev)
         }));
       }
 
@@ -1277,7 +1284,6 @@ const Game = () => {
     lastMoveTimeRef.current = 0;
     
     // Reset state
-    setPlayer(initialPlayer);
     setInventory(initialInventory);
     setEnemies([]);
     setGameState('playing');
@@ -1289,20 +1295,25 @@ const Game = () => {
     setSkillCooldowns({});
     setPlayerBuffs({});
     soulsGrantedRef.current = false;
-    generateNewDungeon(1);
-    // Re-apply meta and run modifiers on new run
+    
+    // Reset player and apply modifiers in correct order
     const metaMods = getMetaPlayerModifiers();
+    let resetPlayer = { ...initialPlayer };
+    
+    // Apply meta-progression modifiers first
     if (metaMods && metaMods.baseStatMultiplier && metaMods.baseStatMultiplier !== 1.0) {
-      setPlayer(prev => ({
-        ...prev,
-        attack: Math.round((prev.attack || 10) * metaMods.baseStatMultiplier),
-        defense: Math.round((prev.defense || 2) * metaMods.baseStatMultiplier),
-        maxHealth: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier),
-        health: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier)
-      }));
+      resetPlayer.attack = Math.round((resetPlayer.attack || 10) * metaMods.baseStatMultiplier);
+      resetPlayer.defense = Math.round((resetPlayer.defense || 2) * metaMods.baseStatMultiplier);
+      resetPlayer.maxHealth = Math.round((resetPlayer.maxHealth || 100) * metaMods.baseStatMultiplier);
+      resetPlayer.health = resetPlayer.maxHealth;
     }
+    
+    // Apply per-run build modifiers
     const picks = rollRunModifiers(2 + Math.floor(Math.random() * 2));
-    setPlayer(prev => applyRunModifiers(prev, picks));
+    resetPlayer = applyRunModifiers(resetPlayer, picks);
+    
+    setPlayer(resetPlayer);
+    generateNewDungeon(1);
   }, [generateNewDungeon]);
 
   // Award souls on game over once, then allow navigation to hub
