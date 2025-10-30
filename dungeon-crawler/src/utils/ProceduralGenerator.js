@@ -90,29 +90,38 @@ export const DUNGEON_THEMES = {
 };
 
 // Select theme based on dungeon level
-export function selectDungeonTheme(level) {
+// Optional options: { unlockedBiomes: string[] }
+export function selectDungeonTheme(level, options = {}) {
+  const unlocked = Array.isArray(options.unlockedBiomes) ? options.unlockedBiomes : [];
+  const allowFrost = unlocked.includes('frost');
+  const allowCrypt = unlocked.includes('crypt');
+
   if (level <= 2) {
     return DUNGEON_THEMES.STONE_DUNGEON;
   } else if (level <= 4) {
-    // Ice or Stone
-    return Math.random() < 0.5 ? DUNGEON_THEMES.ICE_CAVE : DUNGEON_THEMES.STONE_DUNGEON;
+    // Ice or Stone (Ice only if unlocked)
+    if (allowFrost && Math.random() < 0.5) return DUNGEON_THEMES.ICE_CAVE;
+    return DUNGEON_THEMES.STONE_DUNGEON;
   } else if (level <= 6) {
     // Ice, Stone, or Forest
     const choice = Math.random();
-    if (choice < 0.33) return DUNGEON_THEMES.ICE_CAVE;
+    if (choice < 0.33 && allowFrost) return DUNGEON_THEMES.ICE_CAVE;
     if (choice < 0.66) return DUNGEON_THEMES.CURSED_FOREST;
     return DUNGEON_THEMES.STONE_DUNGEON;
   } else if (level <= 8) {
     // Any except Stone
     const available = [
-      DUNGEON_THEMES.ICE_CAVE,
+      ...(allowFrost ? [DUNGEON_THEMES.ICE_CAVE] : []),
       DUNGEON_THEMES.LAVA_PIT,
       DUNGEON_THEMES.CURSED_FOREST
     ];
+    if (available.length === 0) available.push(DUNGEON_THEMES.CURSED_FOREST);
     return available[Math.floor(Math.random() * available.length)];
   } else {
     // End game: Lava or Shadow
-    return Math.random() < 0.5 ? DUNGEON_THEMES.LAVA_PIT : DUNGEON_THEMES.SHADOW_CRYPT;
+    const endChoices = [DUNGEON_THEMES.LAVA_PIT];
+    if (allowCrypt) endChoices.push(DUNGEON_THEMES.SHADOW_CRYPT);
+    return endChoices[Math.floor(Math.random() * endChoices.length)];
   }
 }
 

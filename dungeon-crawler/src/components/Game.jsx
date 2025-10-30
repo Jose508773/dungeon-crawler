@@ -10,6 +10,10 @@ import BattleInterface from './BattleInterface';
 import LevelUpNotification from './LevelUpNotification';
 import SkillTree from './SkillTree';
 import Tutorial from './Tutorial';
+import MovementTrail from './MovementTrail';
+import { useComboSystem } from './ComboSystem';
+import DefenseStanceIndicator from './DefenseStanceIndicator';
+import Tooltip, { ItemTooltip } from './Tooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { generateDungeon } from '../utils/DungeonGenerator';
@@ -18,6 +22,9 @@ import { CombatSystem } from '../utils/CombatSystem';
 import { getChestLoot, applyItemStats, removeItemStats, ITEM_TYPES } from '../utils/ItemSystem';
 import { selectDungeonTheme, generateEnemyName, generateWeaponLoot, applyThemeMultipliers } from '../utils/ProceduralGenerator';
 import { SkillSystem, SKILLS } from '../utils/SkillSystem';
+import MetaUpgrades from './MetaUpgrades';
+import { grantSoulsForRun, getMetaPlayerModifiers } from '../utils/MetaProgression';
+import { rollRunModifiers, applyRunModifiers } from '../utils/RunModifiers';
 import { Heart, ScrollText, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 // Import bag icon
@@ -73,7 +80,7 @@ const Game = () => {
   const [inventory, setInventory] = useState(initialInventory);
   const [dungeon, setDungeon] = useState([]);
   const [enemies, setEnemies] = useState([]);
-  const [gameState, setGameState] = useState('playing'); // 'playing', 'battle', 'paused', 'gameOver'
+  const [gameState, setGameState] = useState('playing'); // 'playing', 'battle', 'paused', 'gameOver', 'hub'
   const [turn, setTurn] = useState(0);
   const [dungeonLevel, setDungeonLevel] = useState(1);
   const [dungeonTheme, setDungeonTheme] = useState(null);
@@ -102,6 +109,7 @@ const Game = () => {
   });
   const [battleFx, setBattleFx] = useState({ enemyShake: false, playerShake: false, floats: [] });
   const battleTimeoutsRef = useRef([]);
+  const soulsGrantedRef = useRef(false);
   
   // Level up state
   const [levelUpData, setLevelUpData] = useState(null);
@@ -110,6 +118,19 @@ const Game = () => {
   const [learnedSkills, setLearnedSkills] = useState({});
   const [skillCooldowns, setSkillCooldowns] = useState({});
   const [playerBuffs, setPlayerBuffs] = useState({});  // Used for temporary skill effects like Shield Block
+  
+  // Combo system
+  const { registerAttack, getComboBonus } = useComboSystem();
+  
+  // Previous player position for trail effect
+  const [prevPlayerPos, setPrevPlayerPos] = useState({ x: player.x, y: player.y });
+  
+  // Track player position changes for trail
+  useEffect(() => {
+    if (player.x !== prevPlayerPos.x || player.y !== prevPlayerPos.y) {
+      setPrevPlayerPos({ x: player.x, y: player.y });
+    }
+  }, [player.x, player.y, prevPlayerPos]);
 
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
@@ -369,21 +390,48 @@ const Game = () => {
     return result;
   }, [learnedSkills, skillCooldowns, player, currentEnemy]);
 
-  // Update explored tiles based on player vision radius
+  // Update explored tiles based on player vision radius - optimized with caching
   const updateExploredTiles = useCallback((playerX, playerY, visionRadius = 4) => {
     setExploredTiles(prev => {
-      const newExplored = new Set(prev);
+      // Early exit if already explored
+      const playerKey = `${playerX},${playerY}`;
+      if (prev.has(playerKey) && prev.size > visionRadius * visionRadius * 2) {
+        // Check if nearby tiles are already explored
+        let allExplored = true;
+        for (let dy = -visionRadius; dy <= visionRadius; dy++) {
+          for (let dx = -visionRadius; dx <= visionRadius; dx++) {
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance <= visionRadius) {
+              const tileX = playerX + dx;
+              const tileY = playerY + dy;
+              if (tileX >= 0 && tileX < BOARD_WIDTH && tileY >= 0 && tileY < BOARD_HEIGHT) {
+                if (!prev.has(`${tileX},${tileY}`)) {
+                  allExplored = false;
+                  break;
+                }
+              }
+            }
+          }
+          if (!allExplored) break;
+        }
+        if (allExplored) return prev; // No changes needed
+      }
       
-      // Reveal tiles within vision radius
+      const newExplored = new Set(prev);
+      const visionRadiusSq = visionRadius * visionRadius; // Pre-calculate for performance
+      
+      // Reveal tiles within vision radius - optimized bounds checking
       for (let dy = -visionRadius; dy <= visionRadius; dy++) {
+        const tileY = playerY + dy;
+        if (tileY < 0 || tileY >= BOARD_HEIGHT) continue;
+        
         for (let dx = -visionRadius; dx <= visionRadius; dx++) {
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance <= visionRadius) {
+          const distanceSq = dx * dx + dy * dy;
+          if (distanceSq <= visionRadiusSq) {
             const tileX = playerX + dx;
-            const tileY = playerY + dy;
             
             // Check if tile is within bounds
-            if (tileX >= 0 && tileX < BOARD_WIDTH && tileY >= 0 && tileY < BOARD_HEIGHT) {
+            if (tileX >= 0 && tileX < BOARD_WIDTH) {
               newExplored.add(`${tileX},${tileY}`);
             }
           }
@@ -416,8 +464,9 @@ const Game = () => {
       setTurn(0);
       turnRef.current = 0;
       
-      // Select theme for this level
-      const theme = selectDungeonTheme(level);
+      // Select theme for this level (respect meta unlocks)
+      const metaMods = getMetaPlayerModifiers();
+      const theme = selectDungeonTheme(level, { unlockedBiomes: metaMods.unlockedBiomes || [] });
       setDungeonTheme(theme);
       
       const dungeonData = generateDungeon(BOARD_WIDTH, BOARD_HEIGHT);
@@ -494,9 +543,36 @@ const Game = () => {
     }
   }, [updateExploredTiles]);
 
+  // Apply passive skills whenever learnedSkills changes
+  useEffect(() => {
+    setPlayer(prev => {
+      // Ensure baseAttack and baseDefense are set initially
+      const playerWithBases = {
+        ...prev,
+        baseAttack: prev.baseAttack || prev.attack || 10,
+        baseDefense: prev.baseDefense || prev.defense || 0
+      };
+      return SkillSystem.applyPassiveSkills(playerWithBases, learnedSkills);
+    });
+  }, [learnedSkills]);
+
   // Initialize dungeon on component mount
   useEffect(() => {
     generateNewDungeon(1);
+    // Apply meta-progression modifiers at run start
+    const metaMods = getMetaPlayerModifiers();
+    if (metaMods && metaMods.baseStatMultiplier && metaMods.baseStatMultiplier !== 1.0) {
+      setPlayer(prev => ({
+        ...prev,
+        attack: Math.round((prev.attack || 10) * metaMods.baseStatMultiplier),
+        defense: Math.round((prev.defense || 2) * metaMods.baseStatMultiplier),
+        maxHealth: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier),
+        health: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier)
+      }));
+    }
+    // Apply per-run build modifiers
+    const picks = rollRunModifiers(2 + Math.floor(Math.random() * 2));
+    setPlayer(prev => applyRunModifiers(prev, picks));
   }, [generateNewDungeon]);
 
   // Reset movement lock when game state changes
@@ -578,10 +654,12 @@ const Game = () => {
         ? { ...prevPlayer, direction }
         : { ...prevPlayer, x: newX, y: newY, direction };
 
-      // Update fog of war when player moves to new position
+      // Update fog of war when player moves to new position - optimized with requestAnimationFrame
       if (!enemyOnTarget) {
         try {
-          setTimeout(() => updateExploredTiles(newX, newY), 0);
+          requestAnimationFrame(() => {
+            updateExploredTiles(newX, newY);
+          });
         } catch (err) {
           console.error('Error updating explored tiles:', err);
         }
@@ -659,17 +737,36 @@ const Game = () => {
     }
 
     try {
+      // Register attack for combo system
+      registerAttack();
+      const comboBonus = getComboBonus();
+      
       // Clone objects for safe updates
       const enemyRef = currentEnemy;
       const playerClone = { ...player };
-      const result = CombatSystem.playerAttackEnemy(playerClone, enemyRef);
+      
+      // Apply combo multiplier to damage if combo is active
+      let result = CombatSystem.playerAttackEnemy(playerClone, enemyRef);
+      if (comboBonus.multiplier > 1.0) {
+        // Increase damage based on combo
+        const bonusDamage = Math.floor(result.damage * (comboBonus.multiplier - 1.0));
+        result.damage += bonusDamage;
+        // Apply bonus damage directly to enemy
+        if (enemyRef.takeDamage) {
+          enemyRef.takeDamage(bonusDamage);
+        }
+      }
 
     // Update enemy state
     // Preserve class instance reference to keep methods like takeDamage working
     setEnemies(prev => prev.map(e => e.id === enemyRef.id ? enemyRef : e));
 
-    // Log message
-    setCombatLog(prev => [...prev.slice(-9), { message: result.message, turn: turnRef.current + 1 }]);
+    // Log message with combo info
+    let attackMessage = result.message;
+    if (comboBonus.bonusText) {
+      attackMessage = `${comboBonus.bonusText} ${attackMessage}`;
+    }
+    setCombatLog(prev => [...prev.slice(-9), { message: attackMessage, turn: turnRef.current + 1 }]);
 
     // Visual shake on enemy
     setBattleFx(prev => ({ ...prev, enemyShake: true }));
@@ -748,7 +845,7 @@ const Game = () => {
       // Fallback: end battle if something goes wrong
       endBattleIfNeeded();
     }
-  }, [battle.active, battle.playerTurn, currentEnemy, player, playerBuffs, endBattleIfNeeded, clearBattleTimeouts, pushFloat]);
+  }, [battle.active, battle.playerTurn, currentEnemy, player, playerBuffs, endBattleIfNeeded, clearBattleTimeouts, pushFloat, registerAttack, getComboBonus]);
 
   const handleBattleRun = useCallback(() => {
     if (!battle.active) return;
@@ -805,52 +902,64 @@ const Game = () => {
       clearTimeout(enemyTurnTimeoutRef.current);
     }
 
-    // Process enemy turns with a small delay (optimized)
+    // Process enemy turns with requestAnimationFrame for better performance
     enemyTurnTimeoutRef.current = setTimeout(() => {
-      setEnemies(prevEnemies => {
-        // Defensive checks
-        if (!Array.isArray(prevEnemies) || prevEnemies.length === 0) {
-          return prevEnemies;
-        }
-        
-        // Filter living enemies first for better performance
-        const livingEnemies = prevEnemies.filter(e => e && e.isAlive);
-        if (livingEnemies.length === 0) return prevEnemies;
+      // Use requestAnimationFrame to batch updates
+      requestAnimationFrame(() => {
+        setEnemies(prevEnemies => {
+          // Defensive checks
+          if (!Array.isArray(prevEnemies) || prevEnemies.length === 0) {
+            return prevEnemies;
+          }
+          
+          // Filter living enemies first for better performance
+          const livingEnemies = prevEnemies.filter(e => e && e.isAlive);
+          if (livingEnemies.length === 0) return prevEnemies;
 
-        let hasChanges = false;
-        
-        // Process enemy movements - mutate in place to preserve class methods
-        prevEnemies.forEach(enemy => {
-          if (!enemy || !enemy.isAlive) return;
+          let hasChanges = false;
+          const newEnemies = [];
+          
+          // Process enemy movements - create new array instead of mutating
+          for (let i = 0; i < prevEnemies.length; i++) {
+            const enemy = prevEnemies[i];
+            if (!enemy || !enemy.isAlive) {
+              newEnemies.push(enemy);
+              continue;
+            }
 
-          // Defensive check: ensure enemy still has getNextMove method
-          if (typeof enemy.getNextMove !== 'function') {
-            console.error('Enemy lost class methods! Type:', enemy.constructor?.name || 'Unknown', 'Enemy:', enemy);
-            return;
+            // Defensive check: ensure enemy still has getNextMove method
+            if (typeof enemy.getNextMove !== 'function') {
+              console.error('Enemy lost class methods! Type:', enemy.constructor?.name || 'Unknown', 'Enemy:', enemy);
+              newEnemies.push(enemy);
+              continue;
+            }
+
+            try {
+              // Get next move from enemy AI with null safety
+              if (!dungeon || !Array.isArray(dungeon) || !player) {
+                newEnemies.push(enemy);
+                continue;
+              }
+              
+              const move = enemy.getNextMove(dungeon, prevEnemies, player, turn);
+              
+              if (move && typeof move.x === 'number' && typeof move.y === 'number' && 
+                  (move.x !== enemy.x || move.y !== enemy.y)) {
+                hasChanges = true;
+                // Create new enemy object with updated position (preserves class instance)
+                newEnemies.push({ ...enemy, x: move.x, y: move.y });
+              } else {
+                newEnemies.push(enemy);
+              }
+            } catch (err) {
+              console.error('Error in enemy AI movement:', err, enemy);
+              newEnemies.push(enemy);
+            }
           }
 
-          try {
-            // Get next move from enemy AI with null safety
-            if (!dungeon || !Array.isArray(dungeon) || !player) {
-              return;
-            }
-            
-            const move = enemy.getNextMove(dungeon, prevEnemies, player, turn);
-            
-            if (move && typeof move.x === 'number' && typeof move.y === 'number' && 
-                (move.x !== enemy.x || move.y !== enemy.y)) {
-              hasChanges = true;
-              // Update enemy position directly (preserves class instance)
-              enemy.x = move.x;
-              enemy.y = move.y;
-            }
-          } catch (err) {
-            console.error('Error in enemy AI movement:', err, enemy);
-          }
+          // Only trigger re-render if changes were made
+          return hasChanges ? newEnemies : prevEnemies;
         });
-
-        // Only trigger re-render if changes were made
-        return hasChanges ? [...prevEnemies] : prevEnemies;
       });
 
       // Apply regeneration
@@ -1125,8 +1234,32 @@ const Game = () => {
     setLearnedSkills({});
     setSkillCooldowns({});
     setPlayerBuffs({});
+    soulsGrantedRef.current = false;
     generateNewDungeon(1);
+    // Re-apply meta and run modifiers on new run
+    const metaMods = getMetaPlayerModifiers();
+    if (metaMods && metaMods.baseStatMultiplier && metaMods.baseStatMultiplier !== 1.0) {
+      setPlayer(prev => ({
+        ...prev,
+        attack: Math.round((prev.attack || 10) * metaMods.baseStatMultiplier),
+        defense: Math.round((prev.defense || 2) * metaMods.baseStatMultiplier),
+        maxHealth: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier),
+        health: Math.round((prev.maxHealth || 100) * metaMods.baseStatMultiplier)
+      }));
+    }
+    const picks = rollRunModifiers(2 + Math.floor(Math.random() * 2));
+    setPlayer(prev => applyRunModifiers(prev, picks));
   }, [generateNewDungeon]);
+
+  // Award souls on game over once, then allow navigation to hub
+  useEffect(() => {
+    if (gameState === 'gameOver' && !soulsGrantedRef.current) {
+      try {
+        grantSoulsForRun({ depth: dungeonLevel, kills: 0, victory: dungeonLevel >= 10 });
+      } catch { /* ignore */ }
+      soulsGrantedRef.current = true;
+    }
+  }, [gameState, dungeonLevel]);
 
   return (
     <div className="min-h-screen magical-particles text-white overflow-hidden">
@@ -1264,6 +1397,19 @@ const Game = () => {
           onRestart={resetGame}
           victory={dungeonLevel >= 10}
         />
+      )}
+
+      {gameState === 'gameOver' && (
+        <div className="fixed bottom-8 inset-x-0 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto">
+            <Button onClick={() => setGameState('hub')}>Return to Hub</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Hub / Meta Upgrades */}
+      {gameState === 'hub' && (
+        <MetaUpgrades onStartRun={resetGame} />
       )}
 
       {/* Battle Overlay */}

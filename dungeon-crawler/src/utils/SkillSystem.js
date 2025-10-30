@@ -1,533 +1,744 @@
-// Skills & Abilities System for Dungeon Crawler
+// Skill System for Dungeon Crawler
+// Defines all player skills and abilities
 
 export const SKILL_BRANCHES = {
   COMBAT: 'combat',
   DEFENSE: 'defense',
-  MAGIC: 'magic'
+  MAGIC: 'magic',
+  SUPPORT: 'support',
+  ULTIMATE: 'ultimate'
 };
 
 export const SKILL_TYPES = {
+  // Type categories
   ACTIVE: 'active',
-  PASSIVE: 'passive'
+  PASSIVE: 'passive',
+  ULTIMATE: 'ultimate',
+  
+  // Active combat skills
+  POWER_STRIKE: 'power_strike',
+  CLEAVE: 'cleave',
+  CHARGE_ATTACK: 'charge_attack',
+  DEFENSIVE_STANCE: 'defensive_stance',
+  WHIRLWIND: 'whirlwind',
+  FIREBALL: 'fireball',
+  ICE_SHARD: 'ice_shard',
+  LIGHTNING_BOLT: 'lightning_bolt',
+  HEAL: 'heal',
+  SHIELD_BASH: 'shield_bash',
+  
+  // Passive abilities
+  COUNTERATTACK: 'counterattack',
+  RIPOSTE: 'riposte',
+  EVASION: 'evasion',
+  PARRY: 'parry',
+  BERSERKER_RAGE: 'berserker_rage',
+  IRON_SKIN: 'iron_skin',
+  QUICK_STRIKE: 'quick_strike',
+  BLOODTHIRST: 'bloodthirst',
+  
+  // Ultimate abilities
+  DRAGON_SLAYER: 'dragon_slayer',
+  PHOENIX_RISING: 'phoenix_rising',
+  VOID_STRIKE: 'void_strike',
+  TIME_STOP: 'time_stop',
+  OMNISLASH: 'omnislash'
 };
 
-// Skill definitions
 export const SKILLS = {
-  // COMBAT BRANCH - Active Skills
-  power_strike: {
-    id: 'power_strike',
+  [SKILL_TYPES.POWER_STRIKE]: {
+    id: SKILL_TYPES.POWER_STRIKE,
     name: 'Power Strike',
+    type: 'active',
+    category: 'combat',
     branch: SKILL_BRANCHES.COMBAT,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 3,
-    description: 'Deal massive damage to a single enemy',
+    level: 1,
+    cost: 0,
+    cooldown: 0,
+    damageMultiplier: 1.5,
+    description: 'A powerful attack that deals 150% damage',
+    icon: '⚔️',
+    color: '#dc2626',
+    requirements: { level: 1 }
+  },
+  
+  [SKILL_TYPES.CLEAVE]: {
+    id: SKILL_TYPES.CLEAVE,
+    name: 'Cleave',
+    type: 'active',
+    category: 'combat',
+    branch: SKILL_BRANCHES.COMBAT,
+    level: 1,
+    cost: 0,
+    cooldown: 2,
+    damageMultiplier: 1.2,
+    areaOfEffect: true,
+    description: 'Strikes all adjacent enemies for 120% damage',
+    icon: '🗡️',
+    color: '#dc2626',
+    requirements: { level: 3 }
+  },
+  
+  [SKILL_TYPES.CHARGE_ATTACK]: {
+    id: SKILL_TYPES.CHARGE_ATTACK,
+    name: 'Charge Attack',
+    type: 'active',
+    category: 'combat',
+    branch: SKILL_BRANCHES.COMBAT,
+    level: 1,
+    cost: 0,
     cooldown: 3,
-    effect: (level) => ({
-      damageMultiplier: 1.5 + (level * 0.5), // 2x at level 1, 2.5x at level 2, 3x at level 3
-      message: 'Power Strike!'
-    }),
-    cost: (level) => level, // 1 SP for level 1, 2 SP for level 2, etc.
-    icon: '⚔️'
+    damageMultiplier: 2.0,
+    description: 'Charges forward and attacks for 200% damage',
+    icon: '💨',
+    color: '#dc2626',
+    requirements: { level: 5 }
   },
-  whirlwind: {
-    id: 'whirlwind',
-    name: 'Whirlwind Attack',
-    branch: SKILL_BRANCHES.COMBAT,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 3,
-    description: 'Attack all adjacent enemies',
+  
+  [SKILL_TYPES.DEFENSIVE_STANCE]: {
+    id: SKILL_TYPES.DEFENSIVE_STANCE,
+    name: 'Defensive Stance',
+    type: 'active',
+    category: 'defense',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    cost: 0,
     cooldown: 4,
-    effect: (level) => ({
-      aoeRadius: 1,
-      damageMultiplier: 0.6 + (level * 0.2), // 80% at level 1, 100% at level 2, 120% at level 3
-      message: 'Whirlwind Attack!'
-    }),
-    requirements: { power_strike: 1 },
-    cost: (level) => level + 1,
-    icon: '🌪️'
+    duration: 3,
+    damageReduction: 0.5,
+    description: 'Reduces incoming damage by 50% for 3 turns',
+    icon: '🛡️',
+    color: '#2563eb',
+    requirements: { level: 2 }
   },
-  execute: {
-    id: 'execute',
-    name: 'Execute',
+  
+  [SKILL_TYPES.WHIRLWIND]: {
+    id: SKILL_TYPES.WHIRLWIND,
+    name: 'Whirlwind',
+    type: 'active',
+    category: 'combat',
     branch: SKILL_BRANCHES.COMBAT,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 2,
-    description: 'Deal extra damage to low-health enemies',
+    level: 1,
+    cost: 0,
     cooldown: 5,
-    effect: (level) => ({
-      damageMultiplier: 1.5 + (level * 0.5),
-      executeThreshold: 0.3 + (level * 0.1), // 30% HP at level 1, 40% HP at level 2
-      bonusMultiplier: 2, // Triple damage if below threshold
-      message: 'Execute!'
-    }),
-    requirements: { whirlwind: 1 },
-    cost: (level) => level + 2,
-    icon: '💀'
+    damageMultiplier: 1.3,
+    areaOfEffect: true,
+    description: 'Spins around dealing 130% damage to all enemies',
+    icon: '🌪️',
+    color: '#dc2626',
+    requirements: { level: 7 }
   },
-
-  // COMBAT BRANCH - Passive Skills
-  critical_mastery: {
-    id: 'critical_mastery',
-    name: 'Critical Mastery',
-    branch: SKILL_BRANCHES.COMBAT,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 3,
-    description: 'Increase critical hit chance and damage',
-    effect: (level) => ({
-      critChanceBonus: level * 0.05, // +5% per level
-      critDamageBonus: level * 0.2, // +20% crit damage per level
-    }),
-    cost: (level) => level,
-    icon: '🎯'
-  },
-  bloodlust: {
-    id: 'bloodlust',
-    name: 'Bloodlust',
-    branch: SKILL_BRANCHES.COMBAT,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 2,
-    description: 'Lifesteal - heal for a percentage of damage dealt',
-    effect: (level) => ({
-      lifestealPercent: level * 0.1, // 10% per level
-    }),
-    requirements: { critical_mastery: 2 },
-    cost: (level) => level + 1,
-    icon: '🩸'
-  },
-
-  // DEFENSE BRANCH - Active Skills
-  shield_block: {
-    id: 'shield_block',
-    name: 'Shield Block',
-    branch: SKILL_BRANCHES.DEFENSE,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 3,
-    description: 'Reduce incoming damage for one turn',
-    cooldown: 3,
-    effect: (level) => ({
-      damageReduction: 0.4 + (level * 0.1), // 50% at level 1, 60% at level 2, 70% at level 3
-      duration: 1,
-      message: 'Shield Block activated!'
-    }),
-    cost: (level) => level,
-    icon: '🛡️'
-  },
-  fortify: {
-    id: 'fortify',
-    name: 'Fortify',
-    branch: SKILL_BRANCHES.DEFENSE,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 2,
-    description: 'Gain temporary defense boost',
-    cooldown: 4,
-    effect: (level) => ({
-      defenseBonus: 5 + (level * 5), // +10 defense at level 1, +15 at level 2
-      duration: 3,
-      message: 'Fortify!'
-    }),
-    requirements: { shield_block: 1 },
-    cost: (level) => level + 1,
-    icon: '⛰️'
-  },
-
-  // DEFENSE BRANCH - Passive Skills
-  iron_skin: {
-    id: 'iron_skin',
-    name: 'Iron Skin',
-    branch: SKILL_BRANCHES.DEFENSE,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 3,
-    description: 'Permanently increase defense',
-    effect: (level) => ({
-      defenseBonus: level * 3, // +3 defense per level
-    }),
-    cost: (level) => level,
-    icon: '🛡️'
-  },
-  damage_reduction: {
-    id: 'damage_reduction',
-    name: 'Damage Reduction',
-    branch: SKILL_BRANCHES.DEFENSE,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 3,
-    description: 'Reduce all incoming damage',
-    effect: (level) => ({
-      damageReductionPercent: level * 0.05, // 5% per level
-    }),
-    requirements: { iron_skin: 2 },
-    cost: (level) => level + 1,
-    icon: '💎'
-  },
-  last_stand: {
-    id: 'last_stand',
-    name: 'Last Stand',
-    branch: SKILL_BRANCHES.DEFENSE,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 1,
-    description: 'Survive with 1 HP once per floor when taking lethal damage',
-    effect: () => ({
-      procChance: 1.0, // 100% chance (doesn't scale with level)
-    }),
-    requirements: { damage_reduction: 2 },
-    cost: () => 3, // Fixed cost
-    icon: '💪'
-  },
-
-  // MAGIC BRANCH - Active Skills
-  heal: {
-    id: 'heal',
-    name: 'Heal',
-    branch: SKILL_BRANCHES.MAGIC,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 3,
-    description: 'Restore health',
-    cooldown: 5,
-    effect: (level) => ({
-      healPercent: 0.2 + (level * 0.1), // 30% at level 1, 40% at level 2, 50% at level 3
-      message: 'Heal!'
-    }),
-    cost: (level) => level,
-    icon: '💚'
-  },
-  fireball: {
-    id: 'fireball',
+  
+  [SKILL_TYPES.FIREBALL]: {
+    id: SKILL_TYPES.FIREBALL,
     name: 'Fireball',
+    type: 'active',
+    category: 'magic',
     branch: SKILL_BRANCHES.MAGIC,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 3,
-    description: 'Cast a fireball dealing magical damage',
+    level: 1,
+    cost: 0,
     cooldown: 3,
-    effect: (level) => ({
-      damageMultiplier: 1.0 + (level * 0.3),
+    damageMultiplier: 1.8,
+    elemental: 'fire',
+    description: 'Launches a fireball dealing 180% fire damage',
+    icon: '🔥',
+    color: '#f97316',
+    requirements: { level: 4 }
+  },
+  
+  [SKILL_TYPES.ICE_SHARD]: {
+    id: SKILL_TYPES.ICE_SHARD,
+    name: 'Ice Shard',
+    type: 'active',
+    category: 'magic',
+    branch: SKILL_BRANCHES.MAGIC,
+    level: 1,
+    cost: 0,
+    cooldown: 2,
+    damageMultiplier: 1.4,
+    elemental: 'ice',
+    statusEffect: 'frozen',
+    statusDuration: 2,
+    description: 'Fires an ice shard dealing 140% damage and freezing the target',
+    icon: '❄️',
+    color: '#3b82f6',
+    requirements: { level: 6 }
+  },
+  
+  [SKILL_TYPES.LIGHTNING_BOLT]: {
+    id: SKILL_TYPES.LIGHTNING_BOLT,
+    name: 'Lightning Bolt',
+    type: 'active',
+    category: 'magic',
+    branch: SKILL_BRANCHES.MAGIC,
+    level: 1,
+    cost: 0,
+    cooldown: 4,
+    damageMultiplier: 2.2,
+    elemental: 'lightning',
+    description: 'Strikes with lightning dealing 220% damage',
+    icon: '⚡',
+    color: '#fbbf24',
+    requirements: { level: 8 }
+  },
+  
+  [SKILL_TYPES.HEAL]: {
+    id: SKILL_TYPES.HEAL,
+    name: 'Heal',
+    type: 'active',
+    category: 'support',
+    branch: SKILL_BRANCHES.SUPPORT,
+    level: 1,
+    cost: 0,
+    cooldown: 4,
+    healing: 50,
+    description: 'Restores 50 HP',
+    icon: '✨',
+    color: '#10b981',
+    requirements: { level: 3 }
+  },
+  
+  [SKILL_TYPES.SHIELD_BASH]: {
+    id: SKILL_TYPES.SHIELD_BASH,
+    name: 'Shield Bash',
+    type: 'active',
+    category: 'combat',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    cost: 0,
+    cooldown: 3,
+    damageMultiplier: 1.1,
+    statusEffect: 'stun',
+    statusDuration: 1,
+    description: 'Bashes with shield dealing 110% damage and stunning the target',
+    icon: '🛡️',
+    color: '#2563eb',
+    requirements: { level: 4 }
+  },
+  
+  [SKILL_TYPES.COUNTERATTACK]: {
+    id: SKILL_TYPES.COUNTERATTACK,
+    name: 'Counterattack',
+    type: 'passive',
+    category: 'defense',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    description: 'Automatically counterattacks when taking damage',
+    icon: '🔄',
+    color: '#7c3aed',
+    requirements: { level: 5 }
+  },
+  
+  [SKILL_TYPES.RIPOSTE]: {
+    id: SKILL_TYPES.RIPOSTE,
+    name: 'Riposte',
+    type: 'passive',
+    category: 'defense',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    description: 'Chance to counterattack with increased damage',
+    icon: '⚔️',
+    color: '#7c3aed',
+    requirements: { level: 7 }
+  },
+  
+  [SKILL_TYPES.EVASION]: {
+    id: SKILL_TYPES.EVASION,
+    name: 'Evasion',
+    type: 'passive',
+    category: 'defense',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    description: 'Chance to dodge incoming attacks',
+    icon: '💨',
+    color: '#7c3aed',
+    requirements: { level: 6 }
+  },
+  
+  [SKILL_TYPES.PARRY]: {
+    id: SKILL_TYPES.PARRY,
+    name: 'Parry',
+    type: 'passive',
+    category: 'defense',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    description: 'Chance to parry attacks and reduce damage',
+    icon: '⚔️',
+    color: '#7c3aed',
+    requirements: { level: 8 }
+  },
+  
+  [SKILL_TYPES.BERSERKER_RAGE]: {
+    id: SKILL_TYPES.BERSERKER_RAGE,
+    name: 'Berserker Rage',
+    type: 'passive',
+    category: 'offense',
+    branch: SKILL_BRANCHES.COMBAT,
+    level: 1,
+    description: 'Increases damage when health is low',
+    icon: '😡',
+    color: '#dc2626',
+    requirements: { level: 9 }
+  },
+  
+  [SKILL_TYPES.IRON_SKIN]: {
+    id: SKILL_TYPES.IRON_SKIN,
+    name: 'Iron Skin',
+    type: 'passive',
+    category: 'defense',
+    branch: SKILL_BRANCHES.DEFENSE,
+    level: 1,
+    description: 'Reduces all incoming damage',
+    icon: '🛡️',
+    color: '#6b7280',
+    requirements: { level: 10 }
+  },
+  
+  [SKILL_TYPES.QUICK_STRIKE]: {
+    id: SKILL_TYPES.QUICK_STRIKE,
+    name: 'Quick Strike',
+    type: 'passive',
+    category: 'offense',
+    branch: SKILL_BRANCHES.COMBAT,
+    level: 1,
+    description: 'Chance to attack twice in one turn',
+    icon: '⚡',
+    color: '#fbbf24',
+    requirements: { level: 11 }
+  },
+  
+  [SKILL_TYPES.BLOODTHIRST]: {
+    id: SKILL_TYPES.BLOODTHIRST,
+    name: 'Bloodthirst',
+    type: 'passive',
+    category: 'offense',
+    branch: SKILL_BRANCHES.COMBAT,
+    level: 1,
+    description: 'Heals when dealing damage',
+    icon: '🩸',
+    color: '#ef4444',
+    requirements: { level: 12 }
+  },
+  
+  [SKILL_TYPES.DRAGON_SLAYER]: {
+    id: SKILL_TYPES.DRAGON_SLAYER,
+    name: 'Dragon Slayer',
+    type: 'ultimate',
+    category: 'combat',
+    branch: SKILL_BRANCHES.ULTIMATE,
+    level: 1,
+    cost: 0,
+    cooldown: 10,
+    damageMultiplier: 3.0,
+    description: 'Ultimate attack dealing 300% damage to dragons',
+    icon: '🐉',
+    color: '#dc2626',
+    requirements: { level: 15, skillPoints: 3 }
+  },
+  
+  [SKILL_TYPES.PHOENIX_RISING]: {
+    id: SKILL_TYPES.PHOENIX_RISING,
+    name: 'Phoenix Rising',
+    type: 'ultimate',
+    category: 'support',
+    branch: SKILL_BRANCHES.ULTIMATE,
+    level: 1,
+    cost: 0,
+    cooldown: 15,
+    healing: 100,
+    statusEffect: 'regeneration',
+    statusDuration: 5,
+    description: 'Fully heals and grants regeneration for 5 turns',
+    icon: '🔥',
+    color: '#f97316',
+    requirements: { level: 18, skillPoints: 3 }
+  },
+  
+  [SKILL_TYPES.VOID_STRIKE]: {
+    id: SKILL_TYPES.VOID_STRIKE,
+    name: 'Void Strike',
+    type: 'ultimate',
+    category: 'magic',
+    branch: SKILL_BRANCHES.ULTIMATE,
+    level: 1,
+    cost: 0,
+    cooldown: 12,
+    damageMultiplier: 2.5,
       ignoreDefense: true,
-      message: 'Fireball!'
-    }),
-    requirements: { heal: 1 },
-    cost: (level) => level + 1,
-    icon: '🔥'
+    description: 'Strikes through all defenses dealing 250% damage',
+    icon: '🌌',
+    color: '#7c3aed',
+    requirements: { level: 20, skillPoints: 3 }
   },
-  chain_lightning: {
-    id: 'chain_lightning',
-    name: 'Chain Lightning',
-    branch: SKILL_BRANCHES.MAGIC,
-    type: SKILL_TYPES.ACTIVE,
-    maxLevel: 2,
-    description: 'Deal damage to multiple enemies',
-    cooldown: 6,
-    effect: (level) => ({
-      damageMultiplier: 0.8 + (level * 0.2),
-      maxTargets: 2 + level, // 3 targets at level 1, 4 at level 2
-      ignoreDefense: true,
-      message: 'Chain Lightning!'
-    }),
-    requirements: { fireball: 2 },
-    cost: (level) => level + 2,
-    icon: '⚡'
+  
+  [SKILL_TYPES.TIME_STOP]: {
+    id: SKILL_TYPES.TIME_STOP,
+    name: 'Time Stop',
+    type: 'ultimate',
+    category: 'magic',
+    branch: SKILL_BRANCHES.ULTIMATE,
+    level: 1,
+    cost: 0,
+    cooldown: 20,
+    duration: 2,
+    description: 'Stops time for 2 turns, allowing extra actions',
+    icon: '⏰',
+    color: '#3b82f6',
+    requirements: { level: 25, skillPoints: 5 }
   },
-
-  // MAGIC BRANCH - Passive Skills
-  mana_shield: {
-    id: 'mana_shield',
-    name: 'Mana Shield',
-    branch: SKILL_BRANCHES.MAGIC,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 3,
-    description: 'Gain bonus max health',
-    effect: (level) => ({
-      maxHealthBonus: level * 15, // +15 HP per level
-    }),
-    cost: (level) => level,
-    icon: '🔮'
-  },
-  regeneration: {
-    id: 'regeneration',
-    name: 'Regeneration',
-    branch: SKILL_BRANCHES.MAGIC,
-    type: SKILL_TYPES.PASSIVE,
-    maxLevel: 3,
-    description: 'Restore health each turn',
-    effect: (level) => ({
-      healthPerTurn: level * 2, // 2 HP per turn per level
-    }),
-    requirements: { mana_shield: 1 },
-    cost: (level) => level + 1,
-    icon: '💫'
+  
+  [SKILL_TYPES.OMNISLASH]: {
+    id: SKILL_TYPES.OMNISLASH,
+    name: 'Omnislash',
+    type: 'ultimate',
+    category: 'combat',
+    branch: SKILL_BRANCHES.ULTIMATE,
+    level: 1,
+    cost: 0,
+    cooldown: 15,
+    damageMultiplier: 4.0,
+    areaOfEffect: true,
+    description: 'Attacks all enemies for 400% damage',
+    icon: '⚔️',
+    color: '#dc2626',
+    requirements: { level: 30, skillPoints: 5 }
   }
 };
 
-// Skill System Manager
 export class SkillSystem {
-  /**
-   * Apply all passive skill effects to a player
-   * @param {Object} player - The player object
-   * @param {Object} learnedSkills - Object mapping skill IDs to levels
-   * @returns {Object} Modified player object with passive bonuses applied
-   */
-  static applyPassiveSkills(player, learnedSkills) {
-    if (!player || !learnedSkills) {
-      console.error('Invalid player or learnedSkills passed to applyPassiveSkills');
-      return player;
-    }
-
-    let modifiedPlayer = { ...player };
-
-    Object.entries(learnedSkills).forEach(([skillId, level]) => {
-      // Skip if no levels learned
-      if (!level || level === 0) return;
-      
-      const skill = SKILLS[skillId];
-      if (!skill) {
-        console.warn(`Unknown skill in learned skills: ${skillId}`);
-        return;
-      }
-      
-      // Only apply passive skills
-      if (skill.type !== SKILL_TYPES.PASSIVE) return;
-
-      // Ensure level doesn't exceed max
-      const effectiveLevel = Math.min(level, skill.maxLevel);
-      const effect = skill.effect(effectiveLevel);
-
-      // Apply passive effects with safety checks
-      if (effect.defenseBonus && typeof effect.defenseBonus === 'number') {
-        modifiedPlayer.defense = (modifiedPlayer.defense || 0) + effect.defenseBonus;
-      }
-      if (effect.maxHealthBonus && typeof effect.maxHealthBonus === 'number') {
-        modifiedPlayer.maxHealth = (modifiedPlayer.maxHealth || 100) + effect.maxHealthBonus;
-      }
-      if (effect.critChanceBonus && typeof effect.critChanceBonus === 'number') {
-        modifiedPlayer.critChance = (modifiedPlayer.critChance || 0.1) + effect.critChanceBonus;
-        // Cap crit chance at 100%
-        modifiedPlayer.critChance = Math.min(1.0, modifiedPlayer.critChance);
-      }
-      if (effect.critDamageBonus && typeof effect.critDamageBonus === 'number') {
-        modifiedPlayer.critDamage = (modifiedPlayer.critDamage || 1.8) + effect.critDamageBonus;
-      }
-      if (effect.damageReductionPercent && typeof effect.damageReductionPercent === 'number') {
-        modifiedPlayer.damageReduction = (modifiedPlayer.damageReduction || 0) + effect.damageReductionPercent;
-        // Cap damage reduction at 90%
-        modifiedPlayer.damageReduction = Math.min(0.9, modifiedPlayer.damageReduction);
-      }
-      if (effect.lifestealPercent && typeof effect.lifestealPercent === 'number') {
-        modifiedPlayer.lifesteal = (modifiedPlayer.lifesteal || 0) + effect.lifestealPercent;
-        // Cap lifesteal at 100%
-        modifiedPlayer.lifesteal = Math.min(1.0, modifiedPlayer.lifesteal);
-      }
-      if (effect.healthPerTurn && typeof effect.healthPerTurn === 'number') {
-        modifiedPlayer.regeneration = (modifiedPlayer.regeneration || 0) + effect.healthPerTurn;
-      }
-    });
-
-    return modifiedPlayer;
+  constructor() {
+    this.learnedSkills = new Set();
+    this.skillCooldowns = new Map();
+    this.skillLevels = new Map();
   }
 
-  /**
-   * Activate an active skill and return its effects
-   * @param {string} skillId - The skill ID to activate
-   * @param {number} level - The level of the skill
-   * @param {Object} player - The player object
-   * @param {Array} targets - Array of target enemies (optional)
-   * @returns {Object} Result object with success status and skill effects
-   */
-  static activateSkill(skillId, level, player, targets = []) {
-    // Validation
-    if (!skillId || !player) {
-      console.error('Invalid parameters for activateSkill');
-      return { success: false, message: 'Invalid skill parameters' };
-    }
-
-    const skill = SKILLS[skillId];
-    if (!skill) {
-      console.error(`Unknown skill: ${skillId}`);
-      return { success: false, message: 'Unknown skill' };
-    }
-
-    if (skill.type !== SKILL_TYPES.ACTIVE) {
-      console.warn(`Attempted to activate passive skill: ${skillId}`);
-      return { success: false, message: 'Cannot activate passive skill' };
-    }
-
-    // Ensure level is valid
-    const effectiveLevel = Math.max(1, Math.min(level, skill.maxLevel));
-    const effect = skill.effect(effectiveLevel);
-    
-    const result = {
-      success: true,
-      message: effect.message,
-      effect,
-      skillName: skill.name,
-      cooldown: skill.cooldown
-    };
-
-    // Apply active skill effects based on skill ID
-    switch (skillId) {
-      case 'heal': {
-        const healAmount = Math.floor(player.maxHealth * effect.healPercent);
-        result.healAmount = healAmount;
-        result.newHealth = Math.min(player.maxHealth, player.health + healAmount);
-        break;
-      }
-
-      case 'shield_block': {
-        result.applyBuff = {
-          type: 'shield_block',
-          damageReduction: effect.damageReduction,
-          duration: effect.duration
-        };
-        break;
-      }
-
-      case 'fortify': {
-        result.applyBuff = {
-          type: 'fortify',
-          defenseBonus: effect.defenseBonus,
-          duration: effect.duration
-        };
-        break;
-      }
-
-      case 'power_strike':
-      case 'fireball':
-      case 'execute': {
-        result.damageMultiplier = effect.damageMultiplier;
-        result.ignoreDefense = effect.ignoreDefense || false;
-        if (skillId === 'execute' && targets && targets[0]) {
-          const enemy = targets[0];
-          const healthPercent = enemy.health / enemy.maxHealth;
-          if (healthPercent <= effect.executeThreshold) {
-            result.damageMultiplier *= effect.bonusMultiplier;
-            result.message += ' EXECUTE!';
-          }
-        }
-        break;
-      }
-
-      case 'whirlwind': {
-        result.isAOE = true;
-        result.damageMultiplier = effect.damageMultiplier;
-        break;
-      }
-
-      case 'chain_lightning': {
-        result.isChainLightning = true;
-        result.damageMultiplier = effect.damageMultiplier;
-        result.maxTargets = effect.maxTargets;
-        result.ignoreDefense = effect.ignoreDefense;
-        break;
-      }
-
-      default: {
-        console.warn(`Unknown skill activation: ${skillId}`);
-        return { success: false, message: 'Unknown skill effect' };
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Check if a skill can be learned based on level and requirements
-   * @param {string} skillId - The skill ID to check
-   * @param {Object} currentSkills - Object mapping skill IDs to current levels
-   * @returns {boolean} True if skill can be learned
-   */
-  static canLearnSkill(skillId, currentSkills) {
-    const skill = SKILLS[skillId];
-    if (!skill) return false;
-
-    const currentLevel = currentSkills[skillId] || 0;
-    
-    // Check if already at max level
-    if (currentLevel >= skill.maxLevel) return false;
-
-    // Check requirements
-    if (skill.requirements) {
-      for (const [reqSkillId, reqLevel] of Object.entries(skill.requirements)) {
-        const hasReqLevel = (currentSkills[reqSkillId] || 0) >= reqLevel;
-        if (!hasReqLevel) return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Get the skill point cost to learn the next level
-   * @param {string} skillId - The skill ID
-   * @param {number} currentLevel - Current level of the skill
-   * @returns {number} Cost in skill points (999 if invalid)
-   */
-  static getSkillCost(skillId, currentLevel) {
-    const skill = SKILLS[skillId];
-    if (!skill) {
-      console.error(`Unknown skill: ${skillId}`);
-      return 999;
-    }
-    // Cost function takes the NEXT level we want to learn
-    const nextLevel = currentLevel + 1;
-    if (nextLevel > skill.maxLevel) {
-      return 999; // Can't level up beyond max
-    }
-    return skill.cost(nextLevel);
-  }
-
-  /**
-   * Get all skills for a specific branch
-   * @param {string} branch - The skill branch (combat, defense, magic)
-   * @returns {Array} Array of skill objects
-   */
+  // Static method to get skills by branch
   static getSkillsByBranch(branch) {
     return Object.values(SKILLS).filter(skill => skill.branch === branch);
   }
 
-  /**
-   * Apply regeneration healing to player
-   * @param {Object} player - The player object
-   * @param {Object} learnedSkills - Object mapping skill IDs to levels
-   * @returns {number} New health value after regeneration
-   */
-  static applyRegeneration(player, learnedSkills) {
-    if (!player || !learnedSkills) {
-      console.error('Invalid parameters for applyRegeneration');
-      return player?.health || 0;
-    }
-
-    const regenSkillLevel = learnedSkills.regeneration || 0;
-    if (regenSkillLevel === 0) return player.health;
-
-    // Validate regeneration skill exists
-    if (!SKILLS.regeneration) {
-      console.error('Regeneration skill not found');
-      return player.health;
-    }
-
-    const effectiveLevel = Math.min(regenSkillLevel, SKILLS.regeneration.maxLevel);
-    const regenEffect = SKILLS.regeneration.effect(effectiveLevel);
-    const healAmount = regenEffect.healthPerTurn || 0;
-    const newHealth = Math.min(player.maxHealth || 100, (player.health || 0) + healAmount);
+  // Static method to get skill cost
+  static getSkillCost(skillId, currentLevel) {
+    const skill = SKILLS[skillId];
+    if (!skill) return 0;
     
-    return Math.max(0, newHealth); // Ensure health doesn't go negative
+    // Base cost is 1 skill point, increases with level
+    return 1 + currentLevel;
   }
 
-  /**
-   * Check if Last Stand passive can trigger
-   * @param {Object} player - The player object
-   * @param {Object} learnedSkills - Object mapping skill IDs to levels
-   * @param {number} dungeonLevel - Current dungeon level
-   * @returns {boolean} True if Last Stand can trigger
-   */
-  static checkLastStand(player, learnedSkills, dungeonLevel) {
-    if (!player || !learnedSkills || typeof dungeonLevel !== 'number') {
-      console.error('Invalid parameters for checkLastStand');
-      return false;
-    }
-
-    const hasLastStand = (learnedSkills.last_stand || 0) > 0;
-    const lastStandUsedThisFloor = player.lastStandUsedOnFloor === dungeonLevel;
+  // Static method to apply passive skills to player stats
+  static applyPassiveSkills(player, learnedSkills) {
+    // Create a copy of the player to modify
+    const updatedPlayer = { ...player };
     
-    return hasLastStand && !lastStandUsedThisFloor;
+    // Initialize base stats if they don't exist
+    // Base stats = total stats - item bonuses - passive bonuses
+    if (!updatedPlayer.baseAttack) {
+      updatedPlayer.baseAttack = updatedPlayer.attack || 10;
+    }
+    if (!updatedPlayer.baseDefense) {
+      updatedPlayer.baseDefense = updatedPlayer.defense || 0;
+    }
+    
+    // Reset passive bonuses (we'll recalculate them)
+    updatedPlayer.passiveBonuses = {
+      attack: 0,
+      defense: 0,
+      maxHealth: 0,
+      evasion: 0,
+      critChance: 0
+    };
+    
+    // Apply passive skill bonuses based on learned skills
+    for (const [skillId, level] of Object.entries(learnedSkills)) {
+      if (!level || level === 0) continue;
+      
+      const skill = SKILLS[skillId];
+      if (!skill || skill.type !== 'passive') continue;
+      
+      // Apply bonuses based on skill level (scales with level)
+      switch (skillId) {
+        case SKILL_TYPES.IRON_SKIN:
+          // Increases defense - +2 defense per level
+          updatedPlayer.passiveBonuses.defense += level * 2;
+          break;
+        
+        case SKILL_TYPES.BERSERKER_RAGE:
+          // Increases attack when health is low (tracked as flag)
+          updatedPlayer.hasBerserkerRage = true;
+          updatedPlayer.passiveBonuses.attack += level * 1; // Base bonus
+          break;
+        
+        case SKILL_TYPES.EVASION:
+          // Increases evasion chance - +5% per level
+          updatedPlayer.passiveBonuses.evasion += level * 5;
+          break;
+        
+        case SKILL_TYPES.QUICK_STRIKE:
+          // Chance to attack twice (tracked as flag)
+          updatedPlayer.hasQuickStrike = true;
+          updatedPlayer.passiveBonuses.critChance += level * 3; // Small crit bonus
+          break;
+        
+        case SKILL_TYPES.BLOODTHIRST:
+          // Heals on damage (tracked as flag)
+          updatedPlayer.hasBloodthirst = true;
+          break;
+        
+        case SKILL_TYPES.COUNTERATTACK:
+          // Auto counterattacks (tracked as flag)
+          updatedPlayer.hasCounterattack = true;
+          break;
+        
+        case SKILL_TYPES.RIPOSTE:
+          // Enhanced counterattack (tracked as flag)
+          updatedPlayer.hasRiposte = true;
+          updatedPlayer.passiveBonuses.attack += level * 1;
+          break;
+        
+        case SKILL_TYPES.PARRY:
+          // Parry chance (tracked as flag)
+          updatedPlayer.hasParry = true;
+          updatedPlayer.passiveBonuses.defense += level * 1;
+          break;
+        
+        default:
+          break;
+      }
+    }
+    
+    // Calculate total stats: baseAttack + passiveBonuses + itemBonuses
+    // Item bonuses are already included in the current attack/defense
+    // So we need to extract them first
+    const currentAttack = updatedPlayer.attack || updatedPlayer.baseAttack || 10;
+    const currentDefense = updatedPlayer.defense || updatedPlayer.baseDefense || 0;
+    
+    // Calculate item bonuses (difference between current and base before passive)
+    const itemBonuses = {
+      attack: currentAttack - updatedPlayer.baseAttack,
+      defense: currentDefense - updatedPlayer.baseDefense
+    };
+    
+    // Apply all bonuses: baseAttack + itemBonuses + passiveBonuses
+    updatedPlayer.attack = updatedPlayer.baseAttack + itemBonuses.attack + updatedPlayer.passiveBonuses.attack;
+    updatedPlayer.defense = updatedPlayer.baseDefense + itemBonuses.defense + updatedPlayer.passiveBonuses.defense;
+    
+    return updatedPlayer;
+  }
+
+  // Regeneration tick helper used by Game loop
+  // Restores health by player's regeneration stat each turn
+  static applyRegeneration(player, learnedSkills) {
+    const regenAmount = Math.max(0, Math.floor(player.regeneration || 0));
+    if (regenAmount <= 0) return player.health;
+    const newHealth = Math.min(player.maxHealth || 0, (player.health || 0) + regenAmount);
+    return newHealth;
+  }
+
+  // Static method to check if a skill can be learned
+  static canLearnSkill(skillId, learnedSkills) {
+    const skill = SKILLS[skillId];
+    if (!skill) return false;
+    
+    // Check if already at max level (5)
+    const currentLevel = learnedSkills[skillId] || 0;
+    if (currentLevel >= 5) return false;
+    
+    // Check requirements
+    if (skill.requirements) {
+      // For now, we'll assume requirements are checked elsewhere
+      // This method just checks if the skill can be upgraded
+      return true;
+    }
+    
+    return true;
+  }
+
+  // Learn a new skill
+  learnSkill(skillType) {
+    const skill = SKILLS[skillType];
+    if (!skill) return false;
+
+    // Check requirements
+    if (!this.checkRequirements(skill)) return false;
+
+    this.learnedSkills.add(skillType);
+    this.skillLevels.set(skillType, 1);
+    return true;
+  }
+
+  // Check if skill requirements are met
+  checkRequirements(skill) {
+    const requirements = skill.requirements;
+    if (!requirements) return true;
+
+    // This would need to be passed from the game state
+    // For now, just check if it's a valid skill
+    return true;
+  }
+
+  // Check if skill is learned
+  isSkillLearned(skillType) {
+    return this.learnedSkills.has(skillType);
+  }
+
+  // Get skill level
+  getSkillLevel(skillType) {
+    return this.skillLevels.get(skillType) || 0;
+  }
+
+  // Upgrade a skill
+  upgradeSkill(skillType) {
+    if (!this.isSkillLearned(skillType)) return false;
+    
+    const currentLevel = this.getSkillLevel(skillType);
+    const maxLevel = 5; // Maximum skill level
+    
+    if (currentLevel >= maxLevel) return false;
+    
+    this.skillLevels.set(skillType, currentLevel + 1);
+    return true;
+  }
+
+  // Use a skill
+  useSkill(skillType, caster, target = null) {
+    const skill = SKILLS[skillType];
+    if (!skill || !this.isSkillLearned(skillType)) return null;
+
+    // Check cooldown
+    if (this.isOnCooldown(skillType)) return null;
+
+    // Set cooldown
+    this.skillCooldowns.set(skillType, skill.cooldown);
+
+    // Return skill data for processing
+    return {
+      type: skillType,
+      name: skill.name,
+      damageMultiplier: skill.damageMultiplier,
+      healing: skill.healing,
+      statusEffect: skill.statusEffect,
+      statusDuration: skill.statusDuration,
+      areaOfEffect: skill.areaOfEffect,
+      ignoreDefense: skill.ignoreDefense,
+      elemental: skill.elemental,
+      duration: skill.duration,
+      damageReduction: skill.damageReduction,
+      target: target // Include target for skill processing
+    };
+  }
+
+  // Check if skill is on cooldown
+  isOnCooldown(skillType) {
+    const cooldown = this.skillCooldowns.get(skillType);
+    return cooldown > 0;
+  }
+
+  // Reduce cooldowns
+  reduceCooldowns() {
+    for (const [skillType, cooldown] of this.skillCooldowns) {
+      if (cooldown > 0) {
+        this.skillCooldowns.set(skillType, cooldown - 1);
+      }
+    }
+  }
+
+  // Get available skills
+  getAvailableSkills() {
+    return Array.from(this.learnedSkills).map(skillType => ({
+      type: skillType,
+      ...SKILLS[skillType],
+      level: this.getSkillLevel(skillType),
+      onCooldown: this.isOnCooldown(skillType)
+    }));
+  }
+
+  // Get skill cooldown
+  getSkillCooldown(skillType) {
+    return this.skillCooldowns.get(skillType) || 0;
+  }
+
+  // Get all skills by category
+  getSkillsByCategory(category) {
+    return Object.values(SKILLS).filter(skill => skill.category === category);
+  }
+
+  // Get learnable skills
+  getLearnableSkills(playerLevel, skillPoints) {
+    return Object.entries(SKILLS).filter(([skillType, skill]) => {
+      if (this.isSkillLearned(skillType)) return false;
+      
+      const requirements = skill.requirements;
+      if (!requirements) return true;
+      
+      return playerLevel >= (requirements.level || 0) && 
+             skillPoints >= (requirements.skillPoints || 0);
+    });
   }
 }
 
-export default SkillSystem;
+// Utility functions for skills
+export const SkillUtils = {
+  // Apply skill effects
+  applySkillEffects(skill, caster, target, combatSystem) {
+    const effects = [];
 
+    // Apply damage
+    if (skill.damageMultiplier) {
+      const damage = Math.floor((caster.attack || 10) * skill.damageMultiplier);
+      if (target) {
+        const actualDamage = target.takeDamage ? target.takeDamage(damage) : damage;
+        effects.push({
+          type: 'damage',
+          damage: actualDamage,
+          target: target.name || 'Unknown',
+          skill: skill.name
+        });
+      }
+    }
+
+    // Apply healing
+    if (skill.healing) {
+      const healing = skill.healing;
+      caster.health = Math.min(caster.maxHealth, caster.health + healing);
+      effects.push({
+        type: 'healing',
+        healing: healing,
+        target: caster.name || 'Unknown',
+        skill: skill.name
+      });
+    }
+
+    // Apply status effects
+    if (skill.statusEffect && skill.statusDuration) {
+      if (target && combatSystem.applyStatusEffect) {
+        combatSystem.applyStatusEffect(target, skill.statusEffect, skill.statusDuration);
+        effects.push({
+          type: 'status_effect',
+          effect: skill.statusEffect,
+          duration: skill.statusDuration,
+          target: target.name || 'Unknown',
+          skill: skill.name
+        });
+      }
+    }
+
+    return effects;
+  },
+
+  // Get skill description
+  getSkillDescription(skillType) {
+    const skill = SKILLS[skillType];
+    if (!skill) return 'Unknown skill';
+    
+    let description = skill.description;
+    if (skill.cooldown > 0) {
+      description += ` (Cooldown: ${skill.cooldown} turns)`;
+    }
+    if (skill.cost > 0) {
+      description += ` (Cost: ${skill.cost} MP)`;
+    }
+    
+    return description;
+  }
+};
