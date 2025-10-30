@@ -336,59 +336,7 @@ const Game = () => {
     }
   }, [learnedSkills, player.skillPoints]);
 
-  // Handle using an active skill
-  const handleUseSkill = useCallback((skillId) => {
-    const skill = SKILLS[skillId];
-    if (!skill) return;
-    
-    const level = learnedSkills[skillId] || 0;
-    if (level === 0) return;
-    
-    const cooldown = skillCooldowns[skillId] || 0;
-    if (cooldown > 0) {
-      setCombatLog(prev => [...prev.slice(-9), { 
-        message: `${skill.name} is on cooldown! (${cooldown} turns remaining)`, 
-        turn: turnRef.current 
-      }]);
-      return;
-    }
-    
-    // Activate the skill
-    const result = SkillSystem.activateSkill(skillId, level, player, currentEnemy ? [currentEnemy] : []);
-    
-    if (result.success) {
-      setCombatLog(prev => [...prev.slice(-9), { 
-        message: result.message, 
-        turn: turnRef.current 
-      }]);
-      
-      // Set cooldown
-      setSkillCooldowns(prev => ({
-        ...prev,
-        [skillId]: skill.cooldown
-      }));
-      
-      // Apply skill effects
-      if (result.healAmount) {
-        setPlayer(prev => ({ ...prev, health: result.newHealth }));
-      }
-      
-      if (result.applyBuff) {
-        setPlayerBuffs(prev => ({
-          ...prev,
-          [result.applyBuff.type]: result.applyBuff
-        }));
-      }
-      
-      // If it's a damage skill, store for next attack
-      if (result.damageMultiplier) {
-        // This will be handled in the battle attack function
-        return { ...result, skillId };
-      }
-    }
-    
-    return result;
-  }, [learnedSkills, skillCooldowns, player, currentEnemy]);
+  // Handle using an active skill (moved below endBattleIfNeeded to avoid init order issues)
 
   // Update explored tiles based on player vision radius - optimized with caching
   const updateExploredTiles = useCallback((playerX, playerY, visionRadius = 4) => {
@@ -713,6 +661,110 @@ const Game = () => {
     setBattleFx({ enemyShake: false, playerShake: false, floats: [] });
     clearBattleTimeouts();
   }, [battle.queue, clearBattleTimeouts]);
+
+  // Handle using an active skill
+  const handleUseSkill = useCallback((skillId) => {
+    const skill = SKILLS[skillId];
+    if (!skill) return;
+    
+    const level = learnedSkills[skillId] || 0;
+    if (level === 0) return;
+    
+    const cooldown = skillCooldowns[skillId] || 0;
+    if (cooldown > 0) {
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: `${skill.name} is on cooldown! (${cooldown} turns remaining)`, 
+        turn: turnRef.current 
+      }]);
+      return;
+    }
+    
+    // Activate the skill
+    const result = SkillSystem.activateSkill(skillId, level, player, currentEnemy ? [currentEnemy] : []);
+    
+    if (result.success) {
+      setCombatLog(prev => [...prev.slice(-9), { 
+        message: result.message, 
+        turn: turnRef.current 
+      }]);
+      
+      // Set cooldown
+      setSkillCooldowns(prev => ({
+        ...prev,
+        [skillId]: skill.cooldown
+      }));
+      
+      // Apply skill effects
+      if (result.healAmount) {
+        setPlayer(prev => ({ ...prev, health: result.newHealth }));
+      }
+      
+      if (result.applyBuff) {
+        setPlayerBuffs(prev => ({
+          ...prev,
+          [result.applyBuff.type]: result.applyBuff
+        }));
+      }
+
+      // Apply immediate damage to current enemy if provided
+      if (Array.isArray(result.damageEvents) && result.damageEvents.length > 0 && currentEnemy) {
+        const enemyRef = currentEnemy;
+        const playerClone = { ...player };
+        let totalDamage = 0;
+        for (const evt of result.damageEvents) {
+          if (evt.enemyId === enemyRef.id && enemyRef.takeDamage) {
+            const applied = enemyRef.takeDamage(evt.amount);
+            totalDamage += applied;
+          }
+        }
+        if (totalDamage > 0) {
+          setEnemies(prev => prev.map(e => e.id === enemyRef.id ? enemyRef : e));
+          setCombatLog(prev => [...prev.slice(-9), { message: `Spell dealt ${totalDamage} damage!`, turn: turnRef.current }]);
+          pushFloat('enemy', totalDamage, '#60a5fa');
+        }
+
+        // If enemy defeated, grant rewards and proceed
+        if (!enemyRef.isAlive) {
+          const rewards = CombatSystem.applyRewards(playerClone, [{ damage: totalDamage, enemyDefeated: true }]);
+          setPlayer(prev => ({
+            ...prev,
+            experience: playerClone.experience,
+            gold: playerClone.gold,
+            health: playerClone.health,
+            level: playerClone.level,
+            maxHealth: playerClone.maxHealth,
+            attack: playerClone.attack,
+            defense: playerClone.defense
+          }));
+          setEnemies(prev => prev.filter(e => e.isAlive));
+
+          const messages = [];
+          if (rewards.experience > 0) messages.push(`Gained ${rewards.experience} XP and ${rewards.gold} gold!`);
+          if (rewards.levelUp && rewards.levelUp.leveledUp) {
+            messages.push(rewards.levelUp.message);
+            setLevelUpData(rewards.levelUp);
+          }
+          if (messages.length > 0) {
+            setCombatLog(prev => {
+              const newMessages = messages.map((m, i) => ({ message: m, turn: turnRef.current + 1 + i }));
+              return [...prev.slice(-(10 - newMessages.length)), ...newMessages];
+            });
+          }
+
+          endBattleIfNeeded();
+          return;
+        }
+      }
+      
+      // If it's a damage skill, store for next attack
+      if (result.damageMultiplier) {
+        // This will be handled in the battle attack function
+        return { ...result, skillId };
+      }
+    }
+    
+    return result;
+  }, [learnedSkills, skillCooldowns, player, currentEnemy, pushFloat, endBattleIfNeeded]);
 
   const pushFloat = useCallback((side, amount, color) => {
     const id = Date.now() + Math.random();
