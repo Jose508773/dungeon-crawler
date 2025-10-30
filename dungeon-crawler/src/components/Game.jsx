@@ -662,6 +662,21 @@ const Game = () => {
     clearBattleTimeouts();
   }, [battle.queue, clearBattleTimeouts]);
 
+  const pushFloat = useCallback((side, amount, color) => {
+    const id = Date.now() + Math.random();
+    setBattleFx(prev => ({
+      ...prev,
+      floats: [...(prev.floats || []), { id, side, text: `-${amount}`, color }]
+    }));
+    const tid = setTimeout(() => {
+      setBattleFx(prev => ({
+        ...prev,
+        floats: (prev.floats || []).filter(f => f.id !== id)
+      }));
+    }, 800);
+    battleTimeoutsRef.current.push(tid);
+  }, []);
+
   // Handle using an active skill
   const handleUseSkill = useCallback((skillId) => {
     const skill = SKILLS[skillId];
@@ -765,21 +780,6 @@ const Game = () => {
     
     return result;
   }, [learnedSkills, skillCooldowns, player, currentEnemy, pushFloat, endBattleIfNeeded]);
-
-  const pushFloat = useCallback((side, amount, color) => {
-    const id = Date.now() + Math.random();
-    setBattleFx(prev => ({
-      ...prev,
-      floats: [...(prev.floats || []), { id, side, text: `-${amount}`, color }]
-    }));
-    const tid = setTimeout(() => {
-      setBattleFx(prev => ({
-        ...prev,
-        floats: (prev.floats || []).filter(f => f.id !== id)
-      }));
-    }, 800);
-    battleTimeoutsRef.current.push(tid);
-  }, []);
 
   const handleBattleAttack = useCallback(() => {
     if (!battle.active || !battle.playerTurn) return;
