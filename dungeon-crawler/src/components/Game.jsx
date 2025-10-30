@@ -919,7 +919,7 @@ const Game = () => {
           let hasChanges = false;
           const newEnemies = [];
           
-          // Process enemy movements - create new array instead of mutating
+          // Process enemy movements - keep class instances intact
           for (let i = 0; i < prevEnemies.length; i++) {
             const enemy = prevEnemies[i];
             if (!enemy || !enemy.isAlive) {
@@ -946,8 +946,10 @@ const Game = () => {
               if (move && typeof move.x === 'number' && typeof move.y === 'number' && 
                   (move.x !== enemy.x || move.y !== enemy.y)) {
                 hasChanges = true;
-                // Create new enemy object with updated position (preserves class instance)
-                newEnemies.push({ ...enemy, x: move.x, y: move.y });
+                // Update enemy instance in place, but return a new array reference
+                enemy.x = move.x;
+                enemy.y = move.y;
+                newEnemies.push(enemy);
               } else {
                 newEnemies.push(enemy);
               }

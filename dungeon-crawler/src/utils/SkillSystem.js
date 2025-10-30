@@ -417,6 +417,53 @@ export class SkillSystem {
     return Object.values(SKILLS).filter(skill => skill.branch === branch);
   }
 
+  // Static activation used by Game.jsx
+  // Returns a lightweight result object consumed by UI/battle flow
+  static activateSkill(skillId, level, player, targets = []) {
+    const skill = SKILLS[skillId];
+    if (!skill || !level) {
+      return { success: false, message: 'Invalid skill.' };
+    }
+
+    // Healing skill
+    if (skill.healing) {
+      const healAmount = skill.healing + Math.floor((level - 1) * 10);
+      const newHealth = Math.min(player.maxHealth || 0, (player.health || 0) + healAmount);
+      return {
+        success: true,
+        message: `${skill.name} restored ${healAmount} HP!`,
+        healAmount,
+        newHealth
+      };
+    }
+
+    // Defensive stance/buffs
+    if (skill.damageReduction || skill.statusEffect === 'regeneration') {
+      const applyBuff = {
+        type: skillId,
+        duration: skill.duration || 3,
+        damageReduction: skill.damageReduction || 0,
+        regeneration: skill.statusEffect === 'regeneration' ? 5 : 0
+      };
+      return {
+        success: true,
+        message: `${skill.name} activated!`,
+        applyBuff
+      };
+    }
+
+    // Damage skills: signal a multiplier so battle attack can apply it
+    if (skill.damageMultiplier) {
+      return {
+        success: true,
+        message: `${skill.name} empowered your next attack!`,
+        damageMultiplier: skill.damageMultiplier
+      };
+    }
+
+    return { success: true, message: `${skill.name} used.` };
+  }
+
   // Static method to get skill cost
   static getSkillCost(skillId, currentLevel) {
     const skill = SKILLS[skillId];
